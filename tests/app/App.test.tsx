@@ -70,7 +70,7 @@ describe('App teaching layout', () => {
     });
 
     expect(
-      within(teachingPanel).getByText('Increase a a bit.'),
+      within(teachingPanel).getByRole('heading', { name: 'Increase a a bit.' }),
     ).toBeInTheDocument();
 
     const resetButton = within(teachingPanel).getByRole('button', {
