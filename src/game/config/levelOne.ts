@@ -1,0 +1,20 @@
+export const levelOneConfig = {
+  title: '\u7b2c\u4e00\u5173\uff1a\u611f\u53d7 a \u7684\u529b\u91cf',
+  slider: {
+    min: -2,
+    max: 2,
+    step: 0.05,
+    initial: 0.8,
+  },
+  domain: {
+    xMin: -4.8,
+    xMax: 4.8,
+    sampleStep: 0.1,
+  },
+  thresholds: {
+    flatMax: 0.25,
+    steepMin: 1.35,
+    successMin: 0.45,
+    successMax: 1.05,
+  },
+} as const;
