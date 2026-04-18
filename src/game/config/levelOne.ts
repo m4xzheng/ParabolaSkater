@@ -11,10 +11,15 @@ export const levelOneConfig = {
     xMax: 4.8,
     sampleStep: 0.1,
   },
+  simulation: {
+    frameSampleStride: 4,
+  },
   thresholds: {
     flatMax: 0.25,
     steepMin: 1.35,
-    successMin: 0.45,
-    successMax: 1.05,
+    success: {
+      min: 0.45,
+      max: 1.05,
+    },
   },
 } as const;
