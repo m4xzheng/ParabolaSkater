@@ -9,7 +9,9 @@ const CANVAS_HEIGHT = 480;
 
 export function GameCanvas(props: {
   aValue: number;
+  ghostResults: SimulationResult[];
   phase: SessionPhase;
+  showGhostTrails: boolean;
   simulationResult: SimulationResult | null;
 }): JSX.Element {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -43,10 +45,18 @@ export function GameCanvas(props: {
       width: CANVAS_WIDTH,
       height: CANVAS_HEIGHT,
       a: props.aValue,
+      ghostResults: props.ghostResults,
       phase: props.phase,
+      showGhostTrails: props.showGhostTrails,
       simulationResult: props.simulationResult,
     });
-  }, [props.aValue, props.phase, props.simulationResult]);
+  }, [
+    props.aValue,
+    props.ghostResults,
+    props.phase,
+    props.showGhostTrails,
+    props.simulationResult,
+  ]);
 
   return (
     <figure className="game-canvas-frame">

@@ -19,11 +19,13 @@ export function drawLevel(
     width: number;
     height: number;
     a: number;
+    ghostResults: SimulationResult[];
     phase: SessionPhase;
+    showGhostTrails: boolean;
     simulationResult: SimulationResult | null;
   },
 ): void {
-  const { width, height, a, phase, simulationResult } = input;
+  const { width, height, a, ghostResults, phase, showGhostTrails, simulationResult } = input;
   const mapper = createCoordinateMapper({
     width,
     height,
@@ -39,12 +41,57 @@ export function drawLevel(
   drawBackdrop(context, width, height);
   drawGrid(context, width, height, mapper);
   drawGround(context, width, height, mapper);
+  if (showGhostTrails) {
+    drawGhostTrails(context, mapper, ghostResults);
+  }
   drawParabola(context, mapper, a);
   drawTargets(context, mapper, a);
   drawRider(context, mapper, {
     a,
     phase,
     simulationResult,
+  });
+}
+
+function drawGhostTrails(
+  context: CanvasRenderingContext2D,
+  mapper: ReturnType<typeof createCoordinateMapper>,
+  ghostResults: SimulationResult[],
+): void {
+  ghostResults.forEach((result, index) => {
+    const opacity = Math.min(0.32 + index * 0.12, 0.68);
+
+    context.save();
+    context.strokeStyle = `rgba(244, 114, 182, ${opacity.toFixed(2)})`;
+    context.fillStyle = `rgba(244, 114, 182, ${(opacity * 0.7).toFixed(2)})`;
+    context.lineWidth = 3;
+    context.setLineDash([10, 10]);
+    context.lineJoin = 'round';
+    context.lineCap = 'round';
+    context.beginPath();
+
+    result.frames.forEach((frame, frameIndex) => {
+      const screenPoint = mapper.toScreen(frame.state.mathPosition);
+
+      if (frameIndex === 0) {
+        context.moveTo(screenPoint.x, screenPoint.y);
+        return;
+      }
+
+      context.lineTo(screenPoint.x, screenPoint.y);
+    });
+
+    context.stroke();
+
+    const endPoint = result.frames[result.frames.length - 1]?.state.mathPosition;
+    if (endPoint !== undefined) {
+      const screenPoint = mapper.toScreen(endPoint);
+      context.beginPath();
+      context.arc(screenPoint.x, screenPoint.y, RIDER_RADIUS - 2, 0, Math.PI * 2);
+      context.fill();
+    }
+
+    context.restore();
   });
 }
 
