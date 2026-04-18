@@ -16,6 +16,11 @@ describe('useLevelSession', () => {
     act(() => {
       result.current.setAValue(0.9);
       result.current.startRun();
+    });
+
+    const firstRunId = result.current.activeRunId;
+
+    act(() => {
       result.current.setAValue(1.2);
     });
 
@@ -25,7 +30,7 @@ describe('useLevelSession', () => {
     expect(result.current.aValue).toBe(0.9);
 
     act(() => {
-      result.current.recordOutcome(runSimulation({ a: 0.9 }));
+      result.current.recordOutcome(runSimulation({ a: 0.9 }), firstRunId!);
     });
 
     expect(result.current.phase).toBe('success');
@@ -47,7 +52,12 @@ describe('useLevelSession', () => {
     act(() => {
       result.current.setAValue(0.2);
       result.current.startRun();
-      result.current.recordOutcome(runSimulation({ a: 0.2 }));
+    });
+
+    const firstRunId = result.current.activeRunId;
+
+    act(() => {
+      result.current.recordOutcome(runSimulation({ a: 0.2 }), firstRunId!);
     });
 
     expect(result.current.phase).toBe('failed');
@@ -59,7 +69,12 @@ describe('useLevelSession', () => {
       result.current.resetRun();
       result.current.setAValue(0.15);
       result.current.startRun();
-      result.current.recordOutcome(runSimulation({ a: 0.15 }));
+    });
+
+    const secondRunId = result.current.activeRunId;
+
+    act(() => {
+      result.current.recordOutcome(runSimulation({ a: 0.15 }), secondRunId!);
     });
 
     expect(result.current.phase).toBe('failed');
@@ -124,5 +139,30 @@ describe('useLevelSession', () => {
     expect(result.current.phase).toBe('success');
     expect(result.current.lastSimulationResult).toEqual(successResult);
     expect(result.current.attemptCount).toBe(2);
+  });
+
+  it('rejects untagged outcomes for an active run', () => {
+    const { result } = renderHook(() => useLevelSession());
+    const successResult = runSimulation({ a: 0.9 });
+
+    act(() => {
+      result.current.startRun();
+    });
+
+    act(() => {
+      // @ts-expect-error exercising the runtime contract for missing run identity
+      result.current.recordOutcome(successResult);
+    });
+
+    expect(result.current.phase).toBe('running');
+    expect(result.current.activeRunId).toBe(1);
+    expect(result.current.lastSimulationResult).toBeNull();
+
+    act(() => {
+      result.current.recordOutcome(successResult, result.current.activeRunId!);
+    });
+
+    expect(result.current.phase).toBe('success');
+    expect(result.current.lastSimulationResult).toEqual(successResult);
   });
 });

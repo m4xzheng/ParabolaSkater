@@ -25,7 +25,7 @@ type LevelSessionApi = {
   feedback: ReturnType<typeof deriveFeedback>;
   setAValue: (nextValue: number) => void;
   startRun: () => void;
-  recordOutcome: (result: SimulationResult, runId?: number | null) => void;
+  recordOutcome: (result: SimulationResult, runId: number) => void;
   resetRun: () => void;
 };
 
@@ -79,13 +79,13 @@ export function useLevelSession(): LevelSessionApi {
     });
   }
 
-  function recordOutcome(result: SimulationResult, runId?: number | null): void {
+  function recordOutcome(result: SimulationResult, runId: number): void {
     setState((currentState) => {
       if (currentState.phase !== 'running') {
         return currentState;
       }
 
-      if (runId !== undefined && runId !== currentState.activeRunId) {
+      if (runId !== currentState.activeRunId) {
         return currentState;
       }
 
