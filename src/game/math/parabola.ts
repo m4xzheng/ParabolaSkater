@@ -14,13 +14,28 @@ export function sampleParabolaPoints(input: {
   xMax: number;
   step: number;
 }): MathPoint[] {
-  const points: MathPoint[] = [];
+  if (
+    !Number.isFinite(input.a) ||
+    !Number.isFinite(input.xMin) ||
+    !Number.isFinite(input.xMax) ||
+    !Number.isFinite(input.step)
+  ) {
+    throw new TypeError('sampleParabolaPoints requires finite numeric inputs');
+  }
 
-  for (let x = input.xMin; x <= input.xMax + input.step / 2; x += input.step) {
-    const roundedX = Number(x.toFixed(4));
+  if (input.step <= 0) {
+    throw new RangeError('sampleParabolaPoints requires step > 0');
+  }
+
+  const points: MathPoint[] = [];
+  const span = input.xMax - input.xMin;
+  const sampleCount = Math.max(0, Math.floor(span / input.step + 1e-12));
+
+  for (let index = 0; index <= sampleCount; index += 1) {
+    const x = Number((input.xMin + index * input.step).toFixed(4));
     points.push({
-      x: roundedX,
-      y: evaluateParabola(input.a, roundedX),
+      x,
+      y: evaluateParabola(input.a, x),
     });
   }
 
