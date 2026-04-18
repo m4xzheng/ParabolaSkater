@@ -68,4 +68,61 @@ describe('useLevelSession', () => {
     expect(result.current.feedback.detail).toContain('0.45');
     expect(result.current.feedback.detail).toContain('1.05');
   });
+
+  it('ignores repeated startRun calls outside the editing phase', () => {
+    const { result } = renderHook(() => useLevelSession());
+
+    act(() => {
+      result.current.startRun();
+      result.current.startRun();
+    });
+
+    expect(result.current.phase).toBe('running');
+    expect(result.current.attemptCount).toBe(1);
+    expect(result.current.activeRunId).toBe(1);
+  });
+
+  it('rejects stale outcomes after reset or after a newer run starts', () => {
+    const { result } = renderHook(() => useLevelSession());
+
+    act(() => {
+      result.current.startRun();
+    });
+
+    const firstRunId = result.current.activeRunId;
+    const staleFailure = runSimulation({ a: 0.2 });
+
+    act(() => {
+      result.current.resetRun();
+      result.current.recordOutcome(staleFailure, firstRunId);
+    });
+
+    expect(result.current.phase).toBe('editing');
+    expect(result.current.isSliderLocked).toBe(false);
+    expect(result.current.lastSimulationResult).toBeNull();
+    expect(result.current.attemptCount).toBe(1);
+
+    act(() => {
+      result.current.startRun();
+    });
+
+    const secondRunId = result.current.activeRunId;
+    const successResult = runSimulation({ a: 0.9 });
+
+    act(() => {
+      result.current.recordOutcome(staleFailure, firstRunId);
+    });
+
+    expect(result.current.phase).toBe('running');
+    expect(result.current.activeRunId).toBe(secondRunId);
+    expect(result.current.lastSimulationResult).toBeNull();
+
+    act(() => {
+      result.current.recordOutcome(successResult, secondRunId);
+    });
+
+    expect(result.current.phase).toBe('success');
+    expect(result.current.lastSimulationResult).toEqual(successResult);
+    expect(result.current.attemptCount).toBe(2);
+  });
 });
