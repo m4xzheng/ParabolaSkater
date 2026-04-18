@@ -107,9 +107,11 @@ describe('useLevelSession', () => {
     const firstRunId = result.current.activeRunId;
     const staleFailure = runSimulation({ a: 0.2 });
 
+    expect(firstRunId).not.toBeNull();
+
     act(() => {
       result.current.resetRun();
-      result.current.recordOutcome(staleFailure, firstRunId);
+      result.current.recordOutcome(staleFailure, firstRunId as number);
     });
 
     expect(result.current.phase).toBe('editing');
@@ -124,8 +126,10 @@ describe('useLevelSession', () => {
     const secondRunId = result.current.activeRunId;
     const successResult = runSimulation({ a: 0.9 });
 
+    expect(secondRunId).not.toBeNull();
+
     act(() => {
-      result.current.recordOutcome(staleFailure, firstRunId);
+      result.current.recordOutcome(staleFailure, firstRunId as number);
     });
 
     expect(result.current.phase).toBe('running');
@@ -133,7 +137,7 @@ describe('useLevelSession', () => {
     expect(result.current.lastSimulationResult).toBeNull();
 
     act(() => {
-      result.current.recordOutcome(successResult, secondRunId);
+      result.current.recordOutcome(successResult, secondRunId as number);
     });
 
     expect(result.current.phase).toBe('success');

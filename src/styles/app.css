@@ -1,9 +1,10 @@
 :root {
   color-scheme: light;
-  font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-family: "Trebuchet MS", "PingFang SC", "Microsoft YaHei", sans-serif;
   background:
-    radial-gradient(circle at top, rgba(255, 236, 179, 0.95), transparent 40%),
-    linear-gradient(160deg, #0f172a 0%, #1e293b 45%, #f8fafc 100%);
+    radial-gradient(circle at top left, rgba(255, 236, 179, 0.95), transparent 32%),
+    radial-gradient(circle at bottom right, rgba(125, 211, 252, 0.45), transparent 30%),
+    linear-gradient(135deg, #f8fafc 0%, #dbeafe 48%, #fffbeb 100%);
   color: #0f172a;
 }
 
@@ -25,17 +26,80 @@ body {
 .app-shell {
   min-height: 100vh;
   display: grid;
-  place-items: center;
+  grid-template-columns: minmax(0, 1.3fr) minmax(320px, 0.9fr);
+  gap: 24px;
+  align-items: stretch;
   padding: 24px;
 }
 
-.stage {
-  width: min(100%, 640px);
-  padding: 40px;
+.game-view,
+.teaching-panel {
+  min-width: 0;
+}
+
+.game-view {
+  display: flex;
+}
+
+.game-canvas-frame,
+.teaching-card,
+.status-banner {
   border-radius: 28px;
-  background: rgba(255, 255, 255, 0.88);
-  box-shadow: 0 24px 80px rgba(15, 23, 42, 0.28);
-  backdrop-filter: blur(16px);
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 24px 80px rgba(15, 23, 42, 0.15);
+  backdrop-filter: blur(14px);
+}
+
+.game-canvas-frame {
+  width: 100%;
+  margin: 0;
+  padding: 20px;
+  display: grid;
+  gap: 14px;
+  align-content: start;
+}
+
+.game-canvas {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 20px;
+  background: linear-gradient(180deg, #fefce8 0%, #eff6ff 100%);
+}
+
+.game-canvas-caption {
+  margin: 0;
+  color: #475569;
+  line-height: 1.6;
+}
+
+.teaching-panel {
+  display: grid;
+  gap: 16px;
+  align-content: start;
+}
+
+.status-banner {
+  padding: 18px 22px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.status-banner strong {
+  font-size: 1.1rem;
+}
+
+.status-banner-label {
+  margin: 0 0 6px;
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.teaching-card {
+  padding: 28px;
 }
 
 .eyebrow {
@@ -52,34 +116,58 @@ h1 {
   line-height: 1.1;
 }
 
-.description {
-  margin: 16px 0 28px;
-  max-width: 30rem;
-  font-size: 1.05rem;
+.panel-description,
+.feedback-panel p {
+  margin: 16px 0 0;
+  font-size: 1.02rem;
   line-height: 1.7;
   color: #334155;
 }
 
-.controls {
+.control-form {
   display: grid;
   gap: 12px;
+  margin-top: 24px;
 }
 
-.controls label {
+.control-form label {
   font-weight: 700;
 }
 
-.controls input {
+.control-form output {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #2563eb;
+}
+
+.control-form input {
   width: 100%;
 }
 
-.controls button {
+.control-form button {
   justify-self: start;
   border: 0;
   border-radius: 999px;
   padding: 0.9rem 1.5rem;
-  background: #0f172a;
+  background: linear-gradient(135deg, #0f172a 0%, #2563eb 100%);
   color: #f8fafc;
   font: inherit;
   font-weight: 700;
+  cursor: pointer;
+}
+
+.control-form button:disabled {
+  cursor: progress;
+  opacity: 0.75;
+}
+
+.feedback-panel h2 {
+  margin: 0;
+  font-size: 1.6rem;
+}
+
+@media (max-width: 960px) {
+  .app-shell {
+    grid-template-columns: 1fr;
+  }
 }
