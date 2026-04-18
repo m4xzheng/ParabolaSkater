@@ -1,12 +1,27 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+const { drawLevelSpy } = vi.hoisted(() => ({
+  drawLevelSpy: vi.fn(),
+}));
+
+vi.mock('../../src/game/render/drawLevel', () => ({
+  drawLevel: drawLevelSpy,
+}));
+
 import App from '../../src/app/App';
+
+function createCanvasContextStub(): CanvasRenderingContext2D {
+  return {} as CanvasRenderingContext2D;
+}
 
 describe('App integration', () => {
   beforeEach(() => {
     vi.useFakeTimers();
-    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
+    drawLevelSpy.mockClear();
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(
+      createCanvasContextStub(),
+    );
   });
 
   afterEach(() => {
@@ -126,6 +141,11 @@ describe('App integration', () => {
       name: 'Run review',
     });
     expect(within(repeatedReviewPanel).getByText('Run 2')).toBeInTheDocument();
+    expect(
+      within(repeatedReviewPanel).getByText(
+        'Aim for an a value between 0.45 to 1.05 to add more lift.',
+      ),
+    ).toBeInTheDocument();
     expect(within(repeatedReviewPanel).getByText('2 failed ghost trail(s) ready to compare.')).toBeInTheDocument();
 
     const ghostToggle = within(repeatedReviewPanel).getByRole('checkbox', {
@@ -133,6 +153,60 @@ describe('App integration', () => {
     });
     fireEvent.click(ghostToggle);
     expect(ghostToggle).not.toBeChecked();
+  });
+
+  it('wires failed ghost trails through drawLevel and updates when the toggle changes', async () => {
+    render(<App />);
+
+    const teachingPanel = screen.getByRole('complementary', {
+      name: 'Teaching panel',
+    });
+    const slider = within(teachingPanel).getByLabelText('\u53c2\u6570 a');
+
+    const initialGhostCall = drawLevelSpy.mock.calls.at(-1);
+    expect(initialGhostCall?.[1]).toMatchObject({
+      ghostResults: [],
+      showGhostTrails: true,
+    });
+
+    fireEvent.change(slider, { target: { value: '0.2' } });
+    fireEvent.click(within(teachingPanel).getByRole('button', { name: 'Go' }));
+
+    await act(async () => {
+      await vi.runAllTimersAsync();
+    });
+
+    const firstFailureCall = drawLevelSpy.mock.calls.at(-1);
+    expect(firstFailureCall?.[1]).toMatchObject({
+      showGhostTrails: true,
+    });
+    expect(firstFailureCall?.[1].ghostResults).toHaveLength(1);
+
+    fireEvent.click(within(teachingPanel).getByRole('button', { name: 'Try again' }));
+    fireEvent.change(slider, { target: { value: '0.15' } });
+    fireEvent.click(within(teachingPanel).getByRole('button', { name: 'Go' }));
+
+    await act(async () => {
+      await vi.runAllTimersAsync();
+    });
+
+    const secondFailureCall = drawLevelSpy.mock.calls.at(-1);
+    expect(secondFailureCall?.[1]).toMatchObject({
+      showGhostTrails: true,
+    });
+    expect(secondFailureCall?.[1].ghostResults).toHaveLength(2);
+
+    fireEvent.click(
+      within(teachingPanel).getByRole('checkbox', {
+        name: 'Show failed ghost trails',
+      }),
+    );
+
+    const toggledGhostCall = drawLevelSpy.mock.calls.at(-1);
+    expect(toggledGhostCall?.[1]).toMatchObject({
+      ghostResults: [],
+      showGhostTrails: false,
+    });
   });
 
   it('shows success completion messaging for a viable a value', async () => {

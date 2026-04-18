@@ -59,6 +59,7 @@ export default function App(): JSX.Element {
   const shouldShowReview = phase === 'failed' || phase === 'success';
   const latestFailedRun = failedRuns[failedRuns.length - 1] ?? null;
   const reviewTone = phase === 'success' ? 'success' : 'failed';
+  const failedReviewDetail = feedback.detail || latestFailedRun?.summary || '';
 
   return (
     <main className="app-shell">
@@ -104,9 +105,7 @@ export default function App(): JSX.Element {
             ) : (
               <>
                 <p className="run-review-summary">{feedback.message}</p>
-                <p className="run-review-detail">
-                  {latestFailedRun?.summary ?? feedback.detail}
-                </p>
+                <p className="run-review-detail">{failedReviewDetail}</p>
               </>
             )}
 
