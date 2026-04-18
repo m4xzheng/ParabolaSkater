@@ -60,7 +60,7 @@ describe('App integration', () => {
       within(teachingPanel).getByLabelText('\u53c2\u6570 a'),
     ).toBeInTheDocument();
     expect(
-      within(teachingPanel).getByText('Adjust a to shape the jump.'),
+      within(teachingPanel).getByText('Adjust a to shape the track.'),
     ).toBeInTheDocument();
   });
 
@@ -76,7 +76,7 @@ describe('App integration', () => {
     fireEvent.click(within(teachingPanel).getByRole('button', { name: 'Go' }));
 
     expect(within(teachingPanel).getByText('\u6b63\u5728\u8fd0\u884c')).toBeInTheDocument();
-    expect(within(teachingPanel).getByText('Running the jump...')).toBeInTheDocument();
+    expect(within(teachingPanel).getByText('Running the track...')).toBeInTheDocument();
     expect(slider).toBeDisabled();
     expect(within(teachingPanel).getByRole('button', { name: 'Go' })).toBeDisabled();
 
@@ -96,7 +96,7 @@ describe('App integration', () => {
     fireEvent.click(resetButton);
 
     expect(within(teachingPanel).getByText('\u51c6\u5907\u8c03\u53c2')).toBeInTheDocument();
-    expect(within(teachingPanel).getByText('Adjust a to shape the jump.')).toBeInTheDocument();
+    expect(within(teachingPanel).getByText('Adjust a to shape the track.')).toBeInTheDocument();
     expect(slider).not.toBeDisabled();
     expect(within(teachingPanel).getByRole('button', { name: 'Go' })).toBeEnabled();
   });
@@ -134,7 +134,7 @@ describe('App integration', () => {
     });
 
     expect(
-      within(teachingPanel).getByRole('heading', { name: 'The jump is still too flat.' }),
+      within(teachingPanel).getByRole('heading', { name: 'The track is still too flat.' }),
     ).toBeInTheDocument();
 
     const repeatedReviewPanel = within(teachingPanel).getByRole('region', {
@@ -143,7 +143,7 @@ describe('App integration', () => {
     expect(within(repeatedReviewPanel).getByText('Run 2')).toBeInTheDocument();
     expect(
       within(repeatedReviewPanel).getByText(
-        'Aim for an a value between 0.45 to 1.05 to add more lift.',
+        'Aim for an a value between 0.45 to 1.05 to deepen the track.',
       ),
     ).toBeInTheDocument();
     expect(within(repeatedReviewPanel).getByText('2 failed ghost trail(s) ready to compare.')).toBeInTheDocument();
@@ -225,7 +225,9 @@ describe('App integration', () => {
     });
 
     expect(within(teachingPanel).getByText('\u8fc7\u5173')).toBeInTheDocument();
-    expect(within(teachingPanel).getByText('Nice work: that jump clears the gap.')).toBeInTheDocument();
+    expect(
+      within(teachingPanel).getByText('Nice work: that track carries the skater across.'),
+    ).toBeInTheDocument();
 
     const reviewPanel = within(teachingPanel).getByRole('region', {
       name: 'Run review',
@@ -233,7 +235,7 @@ describe('App integration', () => {
     expect(within(reviewPanel).getByText('Success')).toBeInTheDocument();
     expect(within(reviewPanel).getByText('a = 0.80')).toBeInTheDocument();
     expect(
-      within(reviewPanel).getByText('Nice work: this parabola gives a smooth jump arc.'),
+      within(reviewPanel).getByText('Nice work: this parabola makes a smooth valley track.'),
     ).toBeInTheDocument();
   });
 });

@@ -62,7 +62,7 @@ describe('useLevelSession', () => {
 
     expect(result.current.phase).toBe('failed');
     expect(result.current.feedback.message).toContain('Increase a a bit');
-    expect(result.current.feedback.detail).toContain('more height');
+    expect(result.current.feedback.detail).toContain('deeper dip');
     expect(result.current.attemptCount).toBe(1);
 
     act(() => {

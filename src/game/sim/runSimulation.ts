@@ -14,19 +14,19 @@ const outcomeSummary: Record<
 > = {
   success: {
     messageKey: 'simulation.success',
-    summary: 'Nice work: this parabola gives a smooth jump arc.',
+    summary: 'Nice work: this parabola makes a smooth valley track.',
   },
   'opens-down': {
     messageKey: 'simulation.opens-down',
-    summary: 'Try a positive a so the parabola opens upward.',
+    summary: 'Try a positive a so the parabola opens upward into a valley.',
   },
   'too-flat': {
     messageKey: 'simulation.too-flat',
-    summary: 'Increase a a bit so the jump gains more height.',
+    summary: 'Increase a a bit so the track dips enough to build speed.',
   },
   'too-steep': {
     messageKey: 'simulation.too-steep',
-    summary: 'Lower a a little so the jump is easier to control.',
+    summary: 'Lower a a little so the track is easier to ride.',
   },
 };
 
@@ -78,8 +78,8 @@ function classifyOutcome(a: number): RunOutcome {
 function buildFrames(a: number, sampling: SimulationSampling): SimulationFrame[] {
   const mathPoints = sampleParabolaPoints({
     a,
-    xMin: levelOneConfig.domain.xMin,
-    xMax: levelOneConfig.domain.xMax,
+    xMin: levelOneConfig.geometry.spawnX,
+    xMax: levelOneConfig.geometry.landingX,
     step: sampling.frameStep,
   });
 

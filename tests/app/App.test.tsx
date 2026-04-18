@@ -45,7 +45,7 @@ describe('App teaching layout', () => {
       within(teachingPanel).getByLabelText('\u53c2\u6570 a'),
     ).toBeInTheDocument();
     expect(
-      within(teachingPanel).getByText('Adjust a to shape the jump.'),
+      within(teachingPanel).getByText('Adjust a to shape the track.'),
     ).toBeInTheDocument();
   });
 
@@ -61,7 +61,7 @@ describe('App teaching layout', () => {
     fireEvent.click(within(teachingPanel).getByRole('button', { name: 'Go' }));
 
     expect(within(teachingPanel).getByText('\u6b63\u5728\u8fd0\u884c')).toBeInTheDocument();
-    expect(within(teachingPanel).getByText('Running the jump...')).toBeInTheDocument();
+    expect(within(teachingPanel).getByText('Running the track...')).toBeInTheDocument();
     expect(slider).toBeDisabled();
     expect(within(teachingPanel).getByRole('button', { name: 'Go' })).toBeDisabled();
 
@@ -81,7 +81,7 @@ describe('App teaching layout', () => {
     fireEvent.click(resetButton);
 
     expect(within(teachingPanel).getByText('\u51c6\u5907\u8c03\u53c2')).toBeInTheDocument();
-    expect(within(teachingPanel).getByText('Adjust a to shape the jump.')).toBeInTheDocument();
+    expect(within(teachingPanel).getByText('Adjust a to shape the track.')).toBeInTheDocument();
     expect(slider).not.toBeDisabled();
     expect(within(teachingPanel).getByRole('button', { name: 'Go' })).toBeEnabled();
   });

@@ -8,7 +8,7 @@ describe('runSimulation', () => {
 
     expect(result.outcome).toBe('success');
     expect(result.messageKey).toBe('simulation.success');
-    expect(result.summary).toBe('Nice work: this parabola gives a smooth jump arc.');
+    expect(result.summary).toBe('Nice work: this parabola makes a smooth valley track.');
     expect(result.sampling).toEqual({
       domainSampleStep: levelOneConfig.domain.sampleStep,
       frameSampleStride: levelOneConfig.simulation.frameSampleStride,
@@ -16,25 +16,25 @@ describe('runSimulation', () => {
         levelOneConfig.domain.sampleStep *
         levelOneConfig.simulation.frameSampleStride,
     });
-    expect(result.frames).toHaveLength(25);
+    expect(result.frames).toHaveLength(13);
     expect(result.frames[0]).toMatchObject({
       index: 0,
       progress: 0,
       state: {
-        mathPosition: { x: -4.8, y: 18.432 },
-        slope: -7.68,
+        mathPosition: { x: -2.4, y: 4.608 },
+        slope: -3.84,
       },
     });
     expect(result.frames.at(-1)).toMatchObject({
-      index: 24,
+      index: 12,
       progress: 1,
       state: {
-        mathPosition: { x: 4.8, y: 18.432 },
-        slope: 7.68,
+        mathPosition: { x: 2.4, y: 4.608 },
+        slope: 3.84,
       },
     });
-    expect(result.frames[12]).toMatchObject({
-      index: 12,
+    expect(result.frames[6]).toMatchObject({
+      index: 6,
       progress: 0.5,
       state: {
         mathPosition: { x: 0, y: 0 },
@@ -53,7 +53,9 @@ describe('runSimulation', () => {
 
     expect(result.outcome).toBe('opens-down');
     expect(result.messageKey).toBe('simulation.opens-down');
-    expect(result.summary).toBe('Try a positive a so the parabola opens upward.');
+    expect(result.summary).toBe(
+      'Try a positive a so the parabola opens upward into a valley.',
+    );
   });
 
   it('classifies shallow upward parabolas as too-flat', () => {
@@ -63,7 +65,9 @@ describe('runSimulation', () => {
 
     expect(result.outcome).toBe('too-flat');
     expect(result.messageKey).toBe('simulation.too-flat');
-    expect(result.summary).toBe('Increase a a bit so the jump gains more height.');
+    expect(result.summary).toBe(
+      'Increase a a bit so the track dips enough to build speed.',
+    );
   });
 
   it('classifies steep upward parabolas as too-steep', () => {
@@ -73,7 +77,7 @@ describe('runSimulation', () => {
 
     expect(result.outcome).toBe('too-steep');
     expect(result.messageKey).toBe('simulation.too-steep');
-    expect(result.summary).toBe('Lower a a little so the jump is easier to control.');
+    expect(result.summary).toBe('Lower a a little so the track is easier to ride.');
   });
 
   it('treats success band boundaries as success', () => {

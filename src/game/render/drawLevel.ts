@@ -6,12 +6,6 @@ import type { SessionPhase } from '../state/feedback';
 
 const CANVAS_PADDING = 40;
 const RIDER_RADIUS = 9;
-const levelGeometry = {
-  gapLeftX: -0.85,
-  gapRightX: 0.85,
-  spawnX: -2.5,
-  landingX: 2.5,
-} as const;
 
 export function drawLevel(
   context: CanvasRenderingContext2D,
@@ -150,8 +144,8 @@ function drawGround(
 ): void {
   const leftEdge = mapper.toScreen({ x: levelOneConfig.domain.xMin, y: 0 }).x;
   const rightEdge = mapper.toScreen({ x: levelOneConfig.domain.xMax, y: 0 }).x;
-  const gapLeft = mapper.toScreen({ x: levelGeometry.gapLeftX, y: 0 }).x;
-  const gapRight = mapper.toScreen({ x: levelGeometry.gapRightX, y: 0 }).x;
+  const gapLeft = mapper.toScreen({ x: levelOneConfig.geometry.gapLeftX, y: 0 }).x;
+  const gapRight = mapper.toScreen({ x: levelOneConfig.geometry.gapRightX, y: 0 }).x;
   const groundY = mapper.toScreen({ x: 0, y: 0 }).y;
 
   context.save();
@@ -214,12 +208,12 @@ function drawTargets(
   a: number,
 ): void {
   const startPoint = mapper.toScreen({
-    x: levelGeometry.spawnX,
-    y: evaluateParabola(a, levelGeometry.spawnX),
+    x: levelOneConfig.geometry.spawnX,
+    y: evaluateParabola(a, levelOneConfig.geometry.spawnX),
   });
   const landingPoint = mapper.toScreen({
-    x: levelGeometry.landingX,
-    y: evaluateParabola(a, levelGeometry.landingX),
+    x: levelOneConfig.geometry.landingX,
+    y: evaluateParabola(a, levelOneConfig.geometry.landingX),
   });
 
   context.save();
@@ -261,15 +255,15 @@ function getRiderPoint(input: {
 }) {
   if (input.phase === 'running' || input.simulationResult === null) {
     return {
-      x: levelGeometry.spawnX,
-      y: evaluateParabola(input.a, levelGeometry.spawnX),
+      x: levelOneConfig.geometry.spawnX,
+      y: evaluateParabola(input.a, levelOneConfig.geometry.spawnX),
     };
   }
 
   return (
     input.simulationResult.frames[input.simulationResult.frames.length - 1]?.state.mathPosition ?? {
-      x: levelGeometry.spawnX,
-      y: evaluateParabola(input.a, levelGeometry.spawnX),
+      x: levelOneConfig.geometry.spawnX,
+      y: evaluateParabola(input.a, levelOneConfig.geometry.spawnX),
     }
   );
 }

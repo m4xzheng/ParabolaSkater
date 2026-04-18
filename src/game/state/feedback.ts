@@ -20,31 +20,32 @@ const outcomeFeedbackRules: Record<Exclude<RunOutcome, 'success'>, OutcomeFeedba
     'opens-down': {
       initial: {
         message: 'The parabola opens downward.',
-        detail: 'Try a positive a so the skater launches upward.',
+        detail: 'Try a positive a so the track opens upward into a valley.',
       },
       escalated: {
         message: 'The parabola still opens downward.',
-        detail: 'Move a above 0 before your next run so the arc turns upward.',
+        detail:
+          'Move a above 0 before your next run so the track becomes an upward-opening valley.',
       },
     },
     'too-flat': {
       initial: {
         message: 'Increase a a bit.',
-        detail: 'This jump needs more height before it can clear the gap.',
+        detail: 'This track needs a deeper dip before it can carry enough speed.',
       },
       escalated: {
-        message: 'The jump is still too flat.',
-        detail: `Aim for an a value between ${successRange} to add more lift.`,
+        message: 'The track is still too flat.',
+        detail: `Aim for an a value between ${successRange} to deepen the track.`,
       },
     },
     'too-steep': {
       initial: {
         message: 'Lower a a little.',
-        detail: 'This jump rises too sharply and loses control.',
+        detail: 'This track gets narrow too quickly and becomes hard to ride.',
       },
       escalated: {
-        message: 'The jump is still too steep.',
-        detail: `Bring a back toward the ${successRange} range for a smoother arc.`,
+        message: 'The track is still too steep.',
+        detail: `Bring a back toward the ${successRange} range for a smoother ride.`,
       },
     },
   };
@@ -56,14 +57,14 @@ export function deriveFeedback(input: {
 }): SessionFeedback {
   if (input.phase === 'running') {
     return {
-      message: 'Running the jump...',
+      message: 'Running the track...',
       detail: 'Hold this value while the simulation plays.',
     };
   }
 
   if (input.phase === 'success' && input.lastResult !== null) {
     return {
-      message: 'Nice work: that jump clears the gap.',
+      message: 'Nice work: that track carries the skater across.',
       detail: input.lastResult.summary,
     };
   }
@@ -78,7 +79,7 @@ export function deriveFeedback(input: {
   }
 
   return {
-    message: 'Adjust a to shape the jump.',
+    message: 'Adjust a to shape the track.',
     detail: `Look for a value between ${successRange} when you are ready to test.`,
   };
 }

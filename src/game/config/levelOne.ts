@@ -11,6 +11,12 @@ export const levelOneConfig = {
     xMax: 4.8,
     sampleStep: 0.1,
   },
+  geometry: {
+    gapLeftX: -0.85,
+    gapRightX: 0.85,
+    spawnX: -2.4,
+    landingX: 2.4,
+  },
   simulation: {
     frameSampleStride: 4,
   },
