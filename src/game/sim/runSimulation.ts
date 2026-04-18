@@ -1,22 +1,33 @@
 import { levelOneConfig } from '../config/levelOne';
-import { createCoordinateMapper } from '../math/coordinates';
-import { classifyAValue, evaluateParabola } from '../math/parabola';
-import type { RunOutcome, SimulationFrame, SimulationResult } from './types';
+import { classifyAValue, sampleParabolaPoints } from '../math/parabola';
+import type {
+  OutcomeMessageKey,
+  RunOutcome,
+  SimulationFrame,
+  SimulationResult,
+  SimulationSampling,
+} from './types';
 
-const FRAME_COUNT = 25;
-
-const coordinateMapper = createCoordinateMapper({
-  width: 800,
-  height: 500,
-  origin: { x: 400, y: 280 },
-  pixelsPerUnit: 60,
-});
-
-const outcomeSummary: Record<RunOutcome, string> = {
-  success: 'Nice work: this parabola gives a smooth jump arc.',
-  'opens-down': 'Try a positive a so the parabola opens upward.',
-  'too-flat': 'Increase a a bit so the jump gains more height.',
-  'too-steep': 'Lower a a little so the jump is easier to control.',
+const outcomeSummary: Record<
+  RunOutcome,
+  { messageKey: OutcomeMessageKey; summary: string }
+> = {
+  success: {
+    messageKey: 'simulation.success',
+    summary: 'Nice work: this parabola gives a smooth jump arc.',
+  },
+  'opens-down': {
+    messageKey: 'simulation.opens-down',
+    summary: 'Try a positive a so the parabola opens upward.',
+  },
+  'too-flat': {
+    messageKey: 'simulation.too-flat',
+    summary: 'Increase a a bit so the jump gains more height.',
+  },
+  'too-steep': {
+    messageKey: 'simulation.too-steep',
+    summary: 'Lower a a little so the jump is easier to control.',
+  },
 };
 
 export function runSimulation(input: { a: number }): SimulationResult {
@@ -25,12 +36,16 @@ export function runSimulation(input: { a: number }): SimulationResult {
   }
 
   const outcome = classifyOutcome(input.a);
+  const sampling = getSampling();
+  const feedback = outcomeSummary[outcome];
 
   return {
     a: input.a,
     outcome,
-    summary: outcomeSummary[outcome],
-    frames: buildFrames(input.a),
+    messageKey: feedback.messageKey,
+    summary: feedback.summary,
+    sampling,
+    frames: buildFrames(input.a, sampling),
   };
 }
 
@@ -41,38 +56,60 @@ function classifyOutcome(a: number): RunOutcome {
     return 'opens-down';
   }
 
-  if (a < levelOneConfig.thresholds.successMin) {
+  if (aValueClass === 'too-flat') {
     return 'too-flat';
   }
 
-  if (a > levelOneConfig.thresholds.successMax) {
+  if (aValueClass === 'too-steep') {
+    return 'too-steep';
+  }
+
+  if (a < levelOneConfig.thresholds.success.min) {
+    return 'too-flat';
+  }
+
+  if (a > levelOneConfig.thresholds.success.max) {
     return 'too-steep';
   }
 
   return 'success';
 }
 
-function buildFrames(a: number): SimulationFrame[] {
-  const { xMin, xMax } = levelOneConfig.domain;
-  const xStep = (xMax - xMin) / (FRAME_COUNT - 1);
+function buildFrames(a: number, sampling: SimulationSampling): SimulationFrame[] {
+  const mathPoints = sampleParabolaPoints({
+    a,
+    xMin: levelOneConfig.domain.xMin,
+    xMax: levelOneConfig.domain.xMax,
+    step: sampling.frameStep,
+  });
 
-  return Array.from({ length: FRAME_COUNT }, (_, index) => {
-    const progress = round(index / (FRAME_COUNT - 1));
-    const mathPosition = {
-      x: round(xMin + xStep * index),
-      y: round(evaluateParabola(a, xMin + xStep * index)),
-    };
+  return mathPoints.map((mathPosition, index) => {
+    const progress = round(index / (mathPoints.length - 1));
 
     return {
       index,
       progress,
       state: {
-        mathPosition,
-        screenPosition: coordinateMapper.toScreen(mathPosition),
+        mathPosition: {
+          x: round(mathPosition.x),
+          y: round(mathPosition.y),
+        },
         slope: round(2 * a * mathPosition.x),
       },
     };
   });
+}
+
+function getSampling(): SimulationSampling {
+  const frameStep = round(
+    levelOneConfig.domain.sampleStep * levelOneConfig.simulation.frameSampleStride,
+  );
+
+  return {
+    domainSampleStep: levelOneConfig.domain.sampleStep,
+    frameSampleStride: levelOneConfig.simulation.frameSampleStride,
+    frameStep,
+  };
 }
 
 function round(value: number): number {
