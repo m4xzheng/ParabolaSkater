@@ -1,10 +1,17 @@
 import { levelOneConfig } from '../config/levelOne';
 import { createCoordinateMapper } from '../math/coordinates';
-import { sampleParabolaPoints } from '../math/parabola';
+import { evaluateParabola, sampleParabolaPoints } from '../math/parabola';
 import type { SimulationResult } from '../sim/types';
+import type { SessionPhase } from '../state/feedback';
 
 const CANVAS_PADDING = 40;
 const RIDER_RADIUS = 9;
+const levelGeometry = {
+  gapLeftX: -0.85,
+  gapRightX: 0.85,
+  spawnX: -2.5,
+  landingX: 2.5,
+} as const;
 
 export function drawLevel(
   context: CanvasRenderingContext2D,
@@ -12,10 +19,11 @@ export function drawLevel(
     width: number;
     height: number;
     a: number;
+    phase: SessionPhase;
     simulationResult: SimulationResult | null;
   },
 ): void {
-  const { width, height, a, simulationResult } = input;
+  const { width, height, a, phase, simulationResult } = input;
   const mapper = createCoordinateMapper({
     width,
     height,
@@ -32,8 +40,12 @@ export function drawLevel(
   drawGrid(context, width, height, mapper);
   drawGround(context, width, height, mapper);
   drawParabola(context, mapper, a);
-  drawTargets(context, mapper);
-  drawRider(context, mapper, simulationResult);
+  drawTargets(context, mapper, a);
+  drawRider(context, mapper, {
+    a,
+    phase,
+    simulationResult,
+  });
 }
 
 function drawBackdrop(
@@ -91,8 +103,8 @@ function drawGround(
 ): void {
   const leftEdge = mapper.toScreen({ x: levelOneConfig.domain.xMin, y: 0 }).x;
   const rightEdge = mapper.toScreen({ x: levelOneConfig.domain.xMax, y: 0 }).x;
-  const gapLeft = mapper.toScreen({ x: -0.85, y: 0 }).x;
-  const gapRight = mapper.toScreen({ x: 0.85, y: 0 }).x;
+  const gapLeft = mapper.toScreen({ x: levelGeometry.gapLeftX, y: 0 }).x;
+  const gapRight = mapper.toScreen({ x: levelGeometry.gapRightX, y: 0 }).x;
   const groundY = mapper.toScreen({ x: 0, y: 0 }).y;
 
   context.save();
@@ -152,9 +164,16 @@ function drawParabola(
 function drawTargets(
   context: CanvasRenderingContext2D,
   mapper: ReturnType<typeof createCoordinateMapper>,
+  a: number,
 ): void {
-  const startPoint = mapper.toScreen({ x: -2.5, y: levelOneConfig.slider.initial * 6.25 });
-  const landingPoint = mapper.toScreen({ x: 2.5, y: levelOneConfig.slider.initial * 6.25 });
+  const startPoint = mapper.toScreen({
+    x: levelGeometry.spawnX,
+    y: evaluateParabola(a, levelGeometry.spawnX),
+  });
+  const landingPoint = mapper.toScreen({
+    x: levelGeometry.landingX,
+    y: evaluateParabola(a, levelGeometry.landingX),
+  });
 
   context.save();
   context.fillStyle = '#f97316';
@@ -171,22 +190,41 @@ function drawTargets(
 function drawRider(
   context: CanvasRenderingContext2D,
   mapper: ReturnType<typeof createCoordinateMapper>,
-  simulationResult: SimulationResult | null,
+  input: {
+    a: number;
+    phase: SessionPhase;
+    simulationResult: SimulationResult | null;
+  },
 ): void {
-  const riderPoint =
-    simulationResult?.frames[simulationResult.frames.length - 1]?.state.mathPosition ??
-    {
-      x: -2.5,
-      y: simulationResult === null ? levelOneConfig.slider.initial * 6.25 : 0,
-    };
+  const riderPoint = getRiderPoint(input);
   const screenPoint = mapper.toScreen(riderPoint);
 
   context.save();
-  context.fillStyle = simulationResult?.outcome === 'success' ? '#16a34a' : '#0f172a';
+  context.fillStyle = input.simulationResult?.outcome === 'success' ? '#16a34a' : '#0f172a';
   context.beginPath();
   context.arc(screenPoint.x, screenPoint.y, RIDER_RADIUS, 0, Math.PI * 2);
   context.fill();
   context.restore();
+}
+
+function getRiderPoint(input: {
+  a: number;
+  phase: SessionPhase;
+  simulationResult: SimulationResult | null;
+}) {
+  if (input.phase === 'running' || input.simulationResult === null) {
+    return {
+      x: levelGeometry.spawnX,
+      y: evaluateParabola(input.a, levelGeometry.spawnX),
+    };
+  }
+
+  return (
+    input.simulationResult.frames[input.simulationResult.frames.length - 1]?.state.mathPosition ?? {
+      x: levelGeometry.spawnX,
+      y: evaluateParabola(input.a, levelGeometry.spawnX),
+    }
+  );
 }
 
 function getPixelsPerUnit(width: number, height: number): number {

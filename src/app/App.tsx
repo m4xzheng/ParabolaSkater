@@ -28,13 +28,23 @@ export default function App(): JSX.Element {
       return;
     }
 
-    recordOutcome(runSimulation({ a: aValue }), activeRunId);
+    const timeoutId = window.setTimeout(() => {
+      recordOutcome(runSimulation({ a: aValue }), activeRunId);
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
   }, [aValue, activeRunId, phase, recordOutcome]);
 
   return (
     <main className="app-shell">
       <section className="game-view" aria-label="Game view">
-        <GameCanvas aValue={aValue} simulationResult={lastSimulationResult} />
+        <GameCanvas
+          aValue={aValue}
+          phase={phase}
+          simulationResult={lastSimulationResult}
+        />
       </section>
 
       <aside className="teaching-panel" aria-label="Teaching panel">
