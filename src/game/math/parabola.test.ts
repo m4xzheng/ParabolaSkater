@@ -8,6 +8,7 @@ import {
   sampleVertexParabolaPoints,
 } from './parabola';
 import { createCoordinateMapper } from './coordinates';
+import { levelTwoConfig } from '../config/levelTwo';
 
 describe('parabola math', () => {
   it('samples a y = ax^2 track across a domain', () => {
@@ -108,6 +109,25 @@ describe('parabola math', () => {
       x: -1.1,
       y: 1.15,
     });
+  });
+
+  it('keeps level two vertex and platform invariants aligned', () => {
+    expect(getVertex(levelTwoConfig.targetParameters)).toEqual({
+      x: levelTwoConfig.targetVertex.x,
+      y: levelTwoConfig.targetVertex.y,
+    });
+    expect(
+      evaluateVertexParabola(
+        levelTwoConfig.targetParameters,
+        levelTwoConfig.geometry.leftContactX,
+      ),
+    ).toBeCloseTo(levelTwoConfig.platforms.start.y);
+    expect(
+      evaluateVertexParabola(
+        levelTwoConfig.targetParameters,
+        levelTwoConfig.geometry.rightContactX,
+      ),
+    ).toBeCloseTo(levelTwoConfig.platforms.goal.y);
   });
 
   it('samples a vertex-form parabola across a domain', () => {
