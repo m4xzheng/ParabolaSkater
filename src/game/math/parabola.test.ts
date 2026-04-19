@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest';
 import {
   classifyAValue,
   evaluateParabola,
+  evaluateVertexParabola,
+  getVertex,
   sampleParabolaPoints,
+  sampleVertexParabolaPoints,
 } from './parabola';
 import { createCoordinateMapper } from './coordinates';
 
@@ -89,5 +92,63 @@ describe('parabola math', () => {
 
   it('evaluates y = ax^2 directly', () => {
     expect(evaluateParabola(0.75, -2)).toBe(3);
+  });
+
+  it('evaluates vertex-form parabolas directly', () => {
+    expect(
+      evaluateVertexParabola({ a: 0.5, h: -1, k: 1.25 }, -3),
+    ).toBe(3.25);
+    expect(
+      evaluateVertexParabola({ a: 0.5, h: -1, k: 1.25 }, -1),
+    ).toBe(1.25);
+  });
+
+  it('gets the vertex from vertex-form parameters', () => {
+    expect(getVertex({ a: 0.65, h: -1.1, k: 1.15 })).toEqual({
+      x: -1.1,
+      y: 1.15,
+    });
+  });
+
+  it('samples a vertex-form parabola across a domain', () => {
+    expect(
+      sampleVertexParabolaPoints({
+        parameters: { a: 1, h: 1, k: -2 },
+        xMin: -1,
+        xMax: 3,
+        step: 2,
+      }),
+    ).toEqual([
+      { x: -1, y: 2 },
+      { x: 1, y: -2 },
+      { x: 3, y: 2 },
+    ]);
+  });
+
+  it('rejects invalid vertex-form sampling inputs', () => {
+    expect(() =>
+      sampleVertexParabolaPoints({
+        parameters: { a: Number.NaN, h: 0, k: 0 },
+        xMin: -1,
+        xMax: 1,
+        step: 1,
+      }),
+    ).toThrow(/finite/i);
+    expect(() =>
+      sampleVertexParabolaPoints({
+        parameters: { a: 1, h: 0, k: 0 },
+        xMin: Number.NaN,
+        xMax: 1,
+        step: 1,
+      }),
+    ).toThrow(/finite/i);
+    expect(() =>
+      sampleVertexParabolaPoints({
+        parameters: { a: 1, h: 0, k: 0 },
+        xMin: -1,
+        xMax: 1,
+        step: 0,
+      }),
+    ).toThrow(/step/i);
   });
 });
