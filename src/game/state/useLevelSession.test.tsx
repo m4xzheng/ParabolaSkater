@@ -2,7 +2,8 @@ import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
 import { levelOneConfig } from '../config/levelOne';
-import { runSimulation } from '../sim/runSimulation';
+import { levelTwoConfig } from '../config/levelTwo';
+import { runLevelTwoSimulation, runSimulation } from '../sim/runSimulation';
 import { useLevelSession } from './useLevelSession';
 
 describe('useLevelSession', () => {
@@ -168,5 +169,75 @@ describe('useLevelSession', () => {
 
     expect(result.current.phase).toBe('success');
     expect(result.current.lastSimulationResult).toEqual(successResult);
+  });
+
+  it('enters level two only when requested after level-one success', () => {
+    const { result } = renderHook(() => useLevelSession());
+
+    expect(result.current.activeLevel).toBe('level-one');
+    expect(result.current.canEnterLevelTwo).toBe(false);
+
+    act(() => {
+      result.current.setAValue(0.9);
+      result.current.startRun();
+    });
+
+    const levelOneRunId = result.current.activeRunId;
+
+    act(() => {
+      result.current.recordOutcome(runSimulation({ a: 0.9 }), levelOneRunId!);
+    });
+
+    expect(result.current.activeLevel).toBe('level-one');
+    expect(result.current.phase).toBe('success');
+    expect(result.current.canEnterLevelTwo).toBe(true);
+
+    act(() => {
+      result.current.enterLevelTwo();
+    });
+
+    expect(result.current.activeLevel).toBe('level-two');
+    expect(result.current.phase).toBe('editing');
+    expect(result.current.attemptCount).toBe(0);
+    expect(result.current.lastSimulationResult).toBeNull();
+    expect(result.current.levelTwoParameters).toEqual({
+      a: levelTwoConfig.sliders.a.initial,
+      h: levelTwoConfig.sliders.h.initial,
+      k: levelTwoConfig.sliders.k.initial,
+    });
+  });
+
+  it('tracks level-two outcomes separately from level one', () => {
+    const { result } = renderHook(() => useLevelSession());
+
+    act(() => {
+      result.current.setAValue(0.9);
+      result.current.startRun();
+    });
+
+    const levelOneRunId = result.current.activeRunId;
+
+    act(() => {
+      result.current.recordOutcome(runSimulation({ a: 0.9 }), levelOneRunId!);
+      result.current.enterLevelTwo();
+      result.current.setLevelTwoParameter('a', levelTwoConfig.targetParameters.a);
+      result.current.setLevelTwoParameter('h', levelTwoConfig.targetParameters.h);
+      result.current.setLevelTwoParameter('k', levelTwoConfig.targetParameters.k);
+      result.current.startRun();
+    });
+
+    const levelTwoRunId = result.current.activeRunId;
+
+    act(() => {
+      result.current.recordOutcome(
+        runLevelTwoSimulation(levelTwoConfig.targetParameters),
+        levelTwoRunId!,
+      );
+    });
+
+    expect(result.current.activeLevel).toBe('level-two');
+    expect(result.current.phase).toBe('success');
+    expect(result.current.attemptCount).toBe(1);
+    expect(result.current.lastSimulationResult?.levelId).toBe('level-two');
   });
 });
