@@ -207,6 +207,33 @@ describe('useLevelSession', () => {
     });
   });
 
+  it('preserves level-two state when enterLevelTwo is called again', () => {
+    const { result } = renderHook(() => useLevelSession());
+
+    act(() => {
+      result.current.setAValue(0.9);
+      result.current.startRun();
+    });
+
+    const levelOneRunId = result.current.activeRunId;
+
+    act(() => {
+      result.current.recordOutcome(runSimulation({ a: 0.9 }), levelOneRunId!);
+      result.current.enterLevelTwo();
+      result.current.setLevelTwoParameter('a', 1.18);
+    });
+
+    expect(result.current.activeLevel).toBe('level-two');
+    expect(result.current.levelTwoParameters.a).toBe(1.18);
+
+    act(() => {
+      result.current.enterLevelTwo();
+    });
+
+    expect(result.current.activeLevel).toBe('level-two');
+    expect(result.current.levelTwoParameters.a).toBe(1.18);
+  });
+
   it('tracks level-two outcomes separately from level one', () => {
     const { result } = renderHook(() => useLevelSession());
 
@@ -239,6 +266,40 @@ describe('useLevelSession', () => {
     expect(result.current.phase).toBe('success');
     expect(result.current.attemptCount).toBe(1);
     expect(result.current.lastSimulationResult?.levelId).toBe('level-two');
+  });
+
+  it('shows level-two-specific failed feedback after a failed level-two run', () => {
+    const { result } = renderHook(() => useLevelSession());
+
+    act(() => {
+      result.current.setAValue(0.9);
+      result.current.startRun();
+    });
+
+    const levelOneRunId = result.current.activeRunId;
+
+    act(() => {
+      result.current.recordOutcome(runSimulation({ a: 0.9 }), levelOneRunId!);
+      result.current.enterLevelTwo();
+      result.current.setLevelTwoParameter('a', 1.15);
+      result.current.setLevelTwoParameter('h', -0.35);
+      result.current.setLevelTwoParameter('k', 1.85);
+      result.current.startRun();
+    });
+
+    const levelTwoRunId = result.current.activeRunId;
+
+    act(() => {
+      result.current.recordOutcome(
+        runLevelTwoSimulation({ a: 1.15, h: -0.35, k: 1.85 }),
+        levelTwoRunId!,
+      );
+    });
+
+    expect(result.current.phase).toBe('failed');
+    expect(result.current.feedback.message).toBe('还有几处需要调整。');
+    expect(result.current.feedback.detail).toMatch(/偏右|偏高/);
+    expect(result.current.feedback.detail).not.toContain('先调一调 a，再按“开始滑行”。');
   });
 
   it('ignores setters for the inactive level', () => {

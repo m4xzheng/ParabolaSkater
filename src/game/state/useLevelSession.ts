@@ -112,7 +112,15 @@ export function useLevelSession(): LevelSessionApi {
     lastResult: activeRunState.lastSimulationResult,
     failureCount: activeRunState.failureCount,
   };
-  const feedback = deriveFeedback(feedbackInput);
+  const feedback =
+    state.activeLevel === 'level-two' &&
+    activeRunState.phase === 'failed' &&
+    activeRunState.lastSimulationResult?.levelId === 'level-two'
+      ? {
+          message: '还有几处需要调整。',
+          detail: activeRunState.lastSimulationResult.summary,
+        }
+      : deriveFeedback(feedbackInput);
 
   function setAValue(nextValue: number): void {
     setState((currentState) => {
@@ -156,7 +164,10 @@ export function useLevelSession(): LevelSessionApi {
 
   function enterLevelTwo(): void {
     setState((currentState) => {
-      if (!currentState.canEnterLevelTwo) {
+      if (
+        !currentState.canEnterLevelTwo ||
+        currentState.activeLevel !== 'level-one'
+      ) {
         return currentState;
       }
 
