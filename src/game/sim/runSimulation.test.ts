@@ -160,6 +160,22 @@ describe('runLevelTwoSimulation', () => {
     );
   });
 
+  it('keeps negative-a diagnostics exclusive to opens-down', () => {
+    const result = runLevelTwoSimulation({ a: -0.2, h: -1.1, k: 1.15 });
+
+    expect(result.outcome).toBe('level-two-diagnostics');
+    expect(result.diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: 'a-opens-down' }),
+      ]),
+    );
+    expect(result.diagnostics).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: 'a-too-flat' }),
+      ]),
+    );
+  });
+
   it('matches the platform heights at the configured contact points', () => {
     const leftY = evaluateVertexParabola(
       levelTwoConfig.targetParameters,

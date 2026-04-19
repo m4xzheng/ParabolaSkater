@@ -314,16 +314,12 @@ function getLevelTwoDiagnostics(parameters: LevelTwoParameters): LevelTwoDiagnos
       code: 'a-opens-down',
       message: '开口方向不对，必须向上打开。',
     });
-  }
-
-  if (parameters.a < levelTwoConfig.thresholds.a.min) {
+  } else if (parameters.a < levelTwoConfig.thresholds.a.min) {
     diagnostics.push({
       code: 'a-too-flat',
       message: '开口偏平。',
     });
-  }
-
-  if (parameters.a > levelTwoConfig.thresholds.a.max) {
+  } else if (parameters.a > levelTwoConfig.thresholds.a.max) {
     diagnostics.push({
       code: 'a-too-steep',
       message: '开口偏陡。',
