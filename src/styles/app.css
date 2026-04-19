@@ -204,6 +204,10 @@ h1 {
   line-height: 1.7;
 }
 
+.level-entry-row {
+  display: flex;
+}
+
 .level-entry-button {
   justify-self: start;
   border: 0;

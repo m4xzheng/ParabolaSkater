@@ -137,10 +137,6 @@ export default function App(): JSX.Element {
     activeLevel === 'level-one' ? '山谷训练场' : levelTwoConfig.mission.eyebrow;
   const missionTitle =
     activeLevel === 'level-one' ? '把滑手送到右侧平台' : levelTwoConfig.mission.title;
-  const missionCopy =
-    activeLevel === 'level-one'
-      ? '这条滑道是一条抛物线 y = ax²。你要把它调成一条能顺利滑过去的谷底滑道。'
-      : levelTwoConfig.mission.copy;
   const reviewChip =
     activeLevel === 'level-one'
       ? `a = ${aValue.toFixed(2)}`
@@ -149,6 +145,7 @@ export default function App(): JSX.Element {
     activeLevel === 'level-one'
       ? '你已经找到能跨过缺口的 a 值，可以准备进入下一步学习。'
       : '这条顶点式轨道已经和目标圆、左右平台都对齐了。';
+  const showLevelTwoEntry = activeLevel === 'level-one' && canEnterLevelTwo;
 
   return (
     <main className="app-shell">
@@ -157,21 +154,15 @@ export default function App(): JSX.Element {
           <p className="eyebrow">{missionEyebrow}</p>
           <h2 id="mission-brief-title">{missionTitle}</h2>
           <p className="mission-brief-copy">
-            {missionCopy.includes('y = ') ? (
+            {activeLevel === 'level-one' ? (
               <>
-                {activeLevel === 'level-one' ? (
-                  <>
-                    这条滑道是一条抛物线 <code>y = ax²</code>。你要把它调成一条能顺利滑过去的谷底滑道。
-                  </>
-                ) : (
-                  <>
-                    这一关使用 <code>y = a(x - h)^2 + k</code>。先用 <code>h</code> 和{' '}
-                    <code>k</code> 移动顶点，再用 <code>a</code> 调整开口和坡度。
-                  </>
-                )}
+                这条滑道是一条抛物线 <code>y = ax²</code>。你要把它调成一条能顺利滑过去的谷底滑道。
               </>
             ) : (
-              missionCopy
+              <>
+                这一关使用 <code>y = a(x - h)^2 + k</code>。先用 <code>h</code> 和{' '}
+                <code>k</code> 移动顶点，再用 <code>a</code> 调整开口和坡度。
+              </>
             )}
           </p>
           <p className="mission-brief-formula">
@@ -190,7 +181,9 @@ export default function App(): JSX.Element {
         </section>
 
         <GameCanvas
+          activeLevel={activeLevel}
           aValue={activeLevel === 'level-one' ? aValue : levelTwoParameters.a}
+          levelTwoParameters={levelTwoParameters}
           ghostResults={showGhostTrails ? failedRuns : []}
           playbackProgress={
             phase === 'running' ? playbackProgress : lastSimulationResult === null ? 0 : 1
@@ -216,6 +209,14 @@ export default function App(): JSX.Element {
         />
         <FeedbackPanel feedback={feedback} />
 
+        {showLevelTwoEntry ? (
+          <div className="level-entry-row">
+            <button type="button" className="level-entry-button" onClick={enterLevelTwo}>
+              进入第二关
+            </button>
+          </div>
+        ) : null}
+
         {shouldShowReview ? (
           <section
             className={`teaching-card run-review-panel run-review-panel--${reviewTone}`}
@@ -233,16 +234,6 @@ export default function App(): JSX.Element {
             <p className="run-review-detail">
               {phase === 'success' ? successReviewDetail : feedback.detail}
             </p>
-
-            {activeLevel === 'level-one' && phase === 'success' && canEnterLevelTwo ? (
-              <button
-                type="button"
-                className="level-entry-button"
-                onClick={enterLevelTwo}
-              >
-                进入第二关
-              </button>
-            ) : null}
 
             {failedRuns.length > 0 ? (
               <div className="ghost-toggle-row">

@@ -1,7 +1,21 @@
 import { levelOneConfig } from '../config/levelOne';
+import { levelTwoConfig } from '../config/levelTwo';
 import { createCoordinateMapper } from '../math/coordinates';
-import { evaluateParabola, sampleParabolaPoints, type MathPoint } from '../math/parabola';
-import type { FrameMotion, SimulationFrame, SimulationResult } from '../sim/types';
+import {
+  evaluateParabola,
+  evaluateVertexParabola,
+  getVertex,
+  sampleParabolaPoints,
+  sampleVertexParabolaPoints,
+  type MathPoint,
+  type VertexParameters,
+} from '../math/parabola';
+import type {
+  FrameMotion,
+  LevelId,
+  SimulationFrame,
+  SimulationResult,
+} from '../sim/types';
 import type { SessionPhase } from '../state/feedback';
 
 const CANVAS_PADDING = 40;
@@ -42,7 +56,9 @@ export function drawLevel(
   input: {
     width: number;
     height: number;
+    activeLevel: LevelId;
     a: number;
+    levelTwoParameters: VertexParameters;
     ghostResults: SimulationResult[];
     playbackProgress: number;
     phase: SessionPhase;
@@ -53,7 +69,9 @@ export function drawLevel(
   const {
     width,
     height,
+    activeLevel,
     a,
+    levelTwoParameters,
     ghostResults,
     playbackProgress,
     phase,
@@ -61,7 +79,10 @@ export function drawLevel(
     simulationResult,
   } = input;
 
-  const bounds = getSceneMathBounds(a);
+  const bounds =
+    activeLevel === 'level-one'
+      ? getSceneMathBounds(a)
+      : getLevelTwoSceneMathBounds(levelTwoParameters);
   const mapper = createSceneMapper({ width, height, bounds });
 
   context.clearRect(0, 0, width, height);
@@ -69,15 +90,36 @@ export function drawLevel(
   drawBackdrop(context, width, height);
   drawSceneDecorations(context, width, height);
   drawGrid(context, width, height, mapper, bounds);
-  drawPlatforms(context, mapper, bounds);
+  if (activeLevel === 'level-one') {
+    drawPlatforms(context, mapper, bounds);
+  } else {
+    drawLevelTwoPlatforms(context, mapper, bounds);
+  }
 
   if (showGhostTrails) {
     drawGhostTrails(context, mapper, ghostResults);
   }
 
-  drawParabola(context, mapper, a);
-  drawMarkers(context, mapper);
-  drawRider(context, mapper, getRiderState({ playbackProgress, phase, simulationResult }));
+  if (activeLevel === 'level-one') {
+    drawParabola(context, mapper, a);
+    drawMarkers(context, mapper);
+  } else {
+    drawVertexTarget(context, mapper);
+    drawLevelTwoParabola(context, mapper, levelTwoParameters);
+    drawLevelTwoVertex(context, mapper, levelTwoParameters);
+    drawLevelTwoMarkers(context, mapper);
+  }
+
+  drawRider(
+    context,
+    mapper,
+    getRiderState({
+      activeLevel,
+      playbackProgress,
+      phase,
+      simulationResult,
+    }),
+  );
 }
 
 export function getPlatformAnchorPoints(): {
@@ -126,6 +168,74 @@ export function getSceneMathBounds(a: number): MathBounds {
   return {
     xMin: levelOneConfig.domain.xMin,
     xMax: levelOneConfig.domain.xMax,
+    yMin: round(yMin),
+    yMax: round(yMax),
+  };
+}
+
+export function getLevelTwoPlatformAnchorPoints(): {
+  start: MathPoint;
+  goal: MathPoint;
+} {
+  return {
+    start: levelTwoConfig.platforms.start,
+    goal: levelTwoConfig.platforms.goal,
+  };
+}
+
+export function getLevelTwoTrackAnchorPoints(parameters: VertexParameters): {
+  start: MathPoint;
+  goal: MathPoint;
+} {
+  return {
+    start: {
+      x: levelTwoConfig.geometry.leftContactX,
+      y: evaluateVertexParabola(parameters, levelTwoConfig.geometry.leftContactX),
+    },
+    goal: {
+      x: levelTwoConfig.geometry.rightContactX,
+      y: evaluateVertexParabola(parameters, levelTwoConfig.geometry.rightContactX),
+    },
+  };
+}
+
+export function getLevelTwoSceneMathBounds(
+  parameters: VertexParameters,
+): MathBounds {
+  const trackAnchors = getLevelTwoTrackAnchorPoints(parameters);
+  const platformAnchors = getLevelTwoPlatformAnchorPoints();
+  const target = levelTwoConfig.targetVertex;
+  const points = sampleVertexParabolaPoints({
+    parameters,
+    xMin: levelTwoConfig.domain.xMin,
+    xMax: levelTwoConfig.domain.xMax,
+    step: levelTwoConfig.domain.sampleStep,
+  });
+  const yValues = points.map((point) => point.y);
+  const yMin =
+    Math.min(
+      ...yValues,
+      trackAnchors.start.y,
+      trackAnchors.goal.y,
+      platformAnchors.start.y,
+      platformAnchors.goal.y,
+      target.y - target.radius,
+      0,
+    ) - 3;
+  const yMax =
+    Math.max(
+      ...yValues,
+      trackAnchors.start.y,
+      trackAnchors.goal.y,
+      platformAnchors.start.y,
+      platformAnchors.goal.y,
+      target.y + target.radius,
+      0,
+    ) + 4.5;
+
+  return {
+    xMin: levelTwoConfig.domain.xMin,
+    xMax: levelTwoConfig.domain.xMax,
     yMin: round(yMin),
     yMax: round(yMax),
   };
@@ -431,6 +541,27 @@ function drawPlatforms(
   });
 }
 
+function drawLevelTwoPlatforms(
+  context: CanvasRenderingContext2D,
+  mapper: ReturnType<typeof createCoordinateMapper>,
+  bounds: MathBounds,
+): void {
+  const anchors = getLevelTwoPlatformAnchorPoints();
+  const floorY = mapper.toScreen({ x: 0, y: bounds.yMin }).y + 26;
+
+  drawPlatform(context, mapper, anchors.start, floorY, {
+    top: '#f97316',
+    deck: '#fdba74',
+    support: '#7c2d12',
+  });
+
+  drawPlatform(context, mapper, anchors.goal, floorY, {
+    top: '#22c55e',
+    deck: '#86efac',
+    support: '#166534',
+  });
+}
+
 function drawPlatform(
   context: CanvasRenderingContext2D,
   mapper: ReturnType<typeof createCoordinateMapper>,
@@ -533,6 +664,78 @@ function drawParabola(
   context.restore();
 }
 
+function drawVertexTarget(
+  context: CanvasRenderingContext2D,
+  mapper: ReturnType<typeof createCoordinateMapper>,
+): void {
+  const target = levelTwoConfig.targetVertex;
+  const center = mapper.toScreen(target);
+  const edge = mapper.toScreen({ x: target.x + target.radius, y: target.y });
+  const radius = Math.abs(edge.x - center.x);
+
+  context.save();
+  context.fillStyle = 'rgba(250, 204, 21, 0.26)';
+  context.strokeStyle = '#ca8a04';
+  context.lineWidth = 4;
+  context.beginPath();
+  context.arc(center.x, center.y, radius, 0, Math.PI * 2);
+  context.fill();
+  context.stroke();
+  context.restore();
+}
+
+function drawLevelTwoParabola(
+  context: CanvasRenderingContext2D,
+  mapper: ReturnType<typeof createCoordinateMapper>,
+  parameters: VertexParameters,
+): void {
+  const points = sampleVertexParabolaPoints({
+    parameters,
+    xMin: levelTwoConfig.domain.xMin,
+    xMax: levelTwoConfig.domain.xMax,
+    step: levelTwoConfig.domain.sampleStep,
+  });
+
+  context.save();
+  context.strokeStyle = '#0f766e';
+  context.lineWidth = 5;
+  context.lineJoin = 'round';
+  context.lineCap = 'round';
+  context.beginPath();
+
+  points.forEach((point, index) => {
+    const screenPoint = mapper.toScreen(point);
+
+    if (index === 0) {
+      context.moveTo(screenPoint.x, screenPoint.y);
+      return;
+    }
+
+    context.lineTo(screenPoint.x, screenPoint.y);
+  });
+
+  context.stroke();
+  context.restore();
+}
+
+function drawLevelTwoVertex(
+  context: CanvasRenderingContext2D,
+  mapper: ReturnType<typeof createCoordinateMapper>,
+  parameters: VertexParameters,
+): void {
+  const vertex = mapper.toScreen(getVertex(parameters));
+
+  context.save();
+  context.fillStyle = '#0f766e';
+  context.strokeStyle = '#f8fafc';
+  context.lineWidth = 3;
+  context.beginPath();
+  context.arc(vertex.x, vertex.y, 7, 0, Math.PI * 2);
+  context.fill();
+  context.stroke();
+  context.restore();
+}
+
 function drawMarkers(
   context: CanvasRenderingContext2D,
   mapper: ReturnType<typeof createCoordinateMapper>,
@@ -550,6 +753,29 @@ function drawMarkers(
 
   context.fillText('起点平台', startPoint.x - 32, startPoint.y - 62);
   context.fillText('目标平台', goalPoint.x - 28, goalPoint.y - 62);
+  context.restore();
+}
+
+function drawLevelTwoMarkers(
+  context: CanvasRenderingContext2D,
+  mapper: ReturnType<typeof createCoordinateMapper>,
+): void {
+  const anchors = getLevelTwoPlatformAnchorPoints();
+  const target = levelTwoConfig.targetVertex;
+  const startPoint = mapper.toScreen(anchors.start);
+  const goalPoint = mapper.toScreen(anchors.goal);
+  const targetPoint = mapper.toScreen(target);
+
+  context.save();
+  context.font = '700 16px "Segoe UI", "Microsoft YaHei", sans-serif';
+  context.fillStyle = '#0f172a';
+
+  drawFlag(context, startPoint.x - 14, startPoint.y - 54, '#f97316');
+  drawFlag(context, goalPoint.x + 8, goalPoint.y - 54, '#22c55e');
+
+  context.fillText('起点平台', startPoint.x - 32, startPoint.y - 62);
+  context.fillText('终点平台', goalPoint.x - 28, goalPoint.y - 62);
+  context.fillText('顶点目标', targetPoint.x - 34, targetPoint.y - 18);
   context.restore();
 }
 
@@ -643,12 +869,17 @@ function drawPoint(
 }
 
 function getRiderState(input: {
+  activeLevel: LevelId;
   playbackProgress: number;
   phase: SessionPhase;
   simulationResult: SimulationResult | null;
 }): RiderState {
   if (input.phase === 'running' && input.simulationResult !== null) {
-    const interpolated = interpolateFrame(input.simulationResult.frames, input.playbackProgress);
+    const interpolated = interpolateFrame(
+      input.simulationResult.frames,
+      input.playbackProgress,
+      input.activeLevel,
+    );
     return {
       mathPosition: interpolated.mathPosition,
       slope: interpolated.slope,
@@ -669,7 +900,7 @@ function getRiderState(input: {
   }
 
   return {
-    mathPosition: getPlatformAnchorPoints().start,
+    mathPosition: getIdlePlatformAnchor(input.activeLevel),
     slope: 0,
     pose: 'idle',
   };
@@ -678,10 +909,11 @@ function getRiderState(input: {
 function interpolateFrame(
   frames: SimulationFrame[],
   progress: number,
+  activeLevel: LevelId,
 ): { mathPosition: MathPoint; slope: number; motion: FrameMotion } {
   if (frames.length === 0) {
     return {
-      mathPosition: getPlatformAnchorPoints().start,
+      mathPosition: getIdlePlatformAnchor(activeLevel),
       slope: 0,
       motion: 'drop',
     };
@@ -722,6 +954,12 @@ function interpolateFrame(
       (nextFrame.state.slope - previousFrame.state.slope) * segmentProgress,
     motion: previousFrame.state.motion,
   };
+}
+
+function getIdlePlatformAnchor(activeLevel: LevelId): MathPoint {
+  return activeLevel === 'level-one'
+    ? getPlatformAnchorPoints().start
+    : getLevelTwoPlatformAnchorPoints().start;
 }
 
 function mapMotionToPose(motion: FrameMotion): RiderPose {

@@ -121,6 +121,25 @@ describe('App teaching layout', () => {
     ).toBeInTheDocument();
   });
 
+  it('keeps the level-two entry button available after resetting from a successful level-one run', async () => {
+    render(<App />);
+
+    await completeLevelOneSuccess();
+
+    const teachingPanel = screen.getByRole('complementary', {
+      name: '教学面板',
+    });
+
+    fireEvent.click(within(teachingPanel).getByRole('button', { name: '重新调整' }));
+
+    expect(
+      within(teachingPanel).getByRole('button', { name: '进入第二关' }),
+    ).toBeInTheDocument();
+    expect(
+      within(teachingPanel).getByRole('button', { name: '开始滑行' }),
+    ).toBeInTheDocument();
+  });
+
   it('enters level two only after clicking the entry button and shows vertex controls', async () => {
     render(<App />);
 

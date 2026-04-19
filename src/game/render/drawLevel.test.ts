@@ -1,11 +1,15 @@
 import { describe, expect, it } from 'vitest';
 
 import { levelOneConfig } from '../config/levelOne';
-import { evaluateParabola } from '../math/parabola';
+import { levelTwoConfig } from '../config/levelTwo';
+import { evaluateParabola, evaluateVertexParabola } from '../math/parabola';
 import {
   createRiderSilhouette,
-  getSceneLayout,
+  getLevelTwoPlatformAnchorPoints,
+  getLevelTwoSceneMathBounds,
+  getLevelTwoTrackAnchorPoints,
   getPlatformAnchorPoints,
+  getSceneLayout,
   getSceneMathBounds,
   getTrackAnchorPoints,
 } from './drawLevel';
@@ -56,5 +60,49 @@ describe('drawLevel helpers', () => {
 
     expect(silhouette.arms).toHaveLength(2);
     expect(silhouette.legs).toHaveLength(2);
+  });
+
+  it('keeps level-two platforms fixed and left lower than right', () => {
+    const anchors = getLevelTwoPlatformAnchorPoints();
+
+    expect(anchors.start).toEqual(levelTwoConfig.platforms.start);
+    expect(anchors.goal).toEqual(levelTwoConfig.platforms.goal);
+    expect(anchors.start.y).toBeLessThan(anchors.goal.y);
+  });
+
+  it('computes level-two track contact points from vertex-form parameters', () => {
+    const anchors = getLevelTwoTrackAnchorPoints(levelTwoConfig.targetParameters);
+
+    expect(anchors.start.y).toBeCloseTo(
+      evaluateVertexParabola(
+        levelTwoConfig.targetParameters,
+        levelTwoConfig.geometry.leftContactX,
+      ),
+      4,
+    );
+    expect(anchors.goal.y).toBeCloseTo(
+      evaluateVertexParabola(
+        levelTwoConfig.targetParameters,
+        levelTwoConfig.geometry.rightContactX,
+      ),
+      4,
+    );
+    expect(anchors.start.y).toBeCloseTo(levelTwoConfig.platforms.start.y, 4);
+    expect(anchors.goal.y).toBeCloseTo(levelTwoConfig.platforms.goal.y, 4);
+  });
+
+  it('keeps the level-two target circle and platforms inside visible bounds', () => {
+    const bounds = getLevelTwoSceneMathBounds(levelTwoConfig.targetParameters);
+
+    expect(bounds.xMin).toBeLessThan(
+      levelTwoConfig.targetVertex.x - levelTwoConfig.targetVertex.radius,
+    );
+    expect(bounds.xMax).toBeGreaterThan(
+      levelTwoConfig.targetVertex.x + levelTwoConfig.targetVertex.radius,
+    );
+    expect(bounds.yMin).toBeLessThan(
+      levelTwoConfig.targetVertex.y - levelTwoConfig.targetVertex.radius,
+    );
+    expect(bounds.yMax).toBeGreaterThan(levelTwoConfig.platforms.goal.y);
   });
 });

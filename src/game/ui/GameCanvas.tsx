@@ -1,14 +1,16 @@
 import { useEffect, useRef } from 'react';
 
 import { drawLevel } from '../render/drawLevel';
-import type { SimulationResult } from '../sim/types';
+import type { LevelId, LevelTwoParameters, SimulationResult } from '../sim/types';
 import type { SessionPhase } from '../state/feedback';
 
 const CANVAS_WIDTH = 720;
 const CANVAS_HEIGHT = 480;
 
 export function GameCanvas(props: {
+  activeLevel: LevelId;
   aValue: number;
+  levelTwoParameters: LevelTwoParameters;
   ghostResults: SimulationResult[];
   playbackProgress: number;
   phase: SessionPhase;
@@ -45,7 +47,9 @@ export function GameCanvas(props: {
     drawLevel(context, {
       width: CANVAS_WIDTH,
       height: CANVAS_HEIGHT,
+      activeLevel: props.activeLevel,
       a: props.aValue,
+      levelTwoParameters: props.levelTwoParameters,
       ghostResults: props.ghostResults,
       playbackProgress: props.playbackProgress,
       phase: props.phase,
@@ -53,8 +57,10 @@ export function GameCanvas(props: {
       simulationResult: props.simulationResult,
     });
   }, [
+    props.activeLevel,
     props.aValue,
     props.ghostResults,
+    props.levelTwoParameters,
     props.playbackProgress,
     props.phase,
     props.showGhostTrails,
