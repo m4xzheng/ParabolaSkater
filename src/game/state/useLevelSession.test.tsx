@@ -240,4 +240,37 @@ describe('useLevelSession', () => {
     expect(result.current.attemptCount).toBe(1);
     expect(result.current.lastSimulationResult?.levelId).toBe('level-two');
   });
+
+  it('ignores setters for the inactive level', () => {
+    const { result } = renderHook(() => useLevelSession());
+    const initialLevelTwoParameters = {
+      a: levelTwoConfig.sliders.a.initial,
+      h: levelTwoConfig.sliders.h.initial,
+      k: levelTwoConfig.sliders.k.initial,
+    };
+
+    act(() => {
+      result.current.setLevelTwoParameter('a', levelTwoConfig.targetParameters.a);
+      result.current.setLevelTwoParameter('h', levelTwoConfig.targetParameters.h);
+      result.current.setLevelTwoParameter('k', levelTwoConfig.targetParameters.k);
+    });
+
+    expect(result.current.levelTwoParameters).toEqual(initialLevelTwoParameters);
+
+    act(() => {
+      result.current.setAValue(0.9);
+      result.current.startRun();
+    });
+
+    const levelOneRunId = result.current.activeRunId;
+
+    act(() => {
+      result.current.recordOutcome(runSimulation({ a: 0.9 }), levelOneRunId!);
+      result.current.enterLevelTwo();
+      result.current.setAValue(0.4);
+    });
+
+    expect(result.current.activeLevel).toBe('level-two');
+    expect(result.current.aValue).toBe(0.9);
+  });
 });

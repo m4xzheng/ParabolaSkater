@@ -106,15 +106,20 @@ export function useLevelSession(): LevelSessionApi {
   const [state, setState] = useState<LevelSessionState>(initialState);
   const activeRunState = getActiveRunState(state);
 
-  const feedback = deriveFeedback({
+  const feedbackInput = {
     activeLevel: state.activeLevel,
     phase: activeRunState.phase,
     lastResult: activeRunState.lastSimulationResult,
     failureCount: activeRunState.failureCount,
-  });
+  };
+  const feedback = deriveFeedback(feedbackInput);
 
   function setAValue(nextValue: number): void {
     setState((currentState) => {
+      if (currentState.activeLevel !== 'level-one') {
+        return currentState;
+      }
+
       if (currentState.levelOne.isSliderLocked) {
         return currentState;
       }
@@ -131,6 +136,10 @@ export function useLevelSession(): LevelSessionApi {
     nextValue: number,
   ): void {
     setState((currentState) => {
+      if (currentState.activeLevel !== 'level-two') {
+        return currentState;
+      }
+
       if (currentState.levelTwo.isSliderLocked) {
         return currentState;
       }
