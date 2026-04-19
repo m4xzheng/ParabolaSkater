@@ -1,11 +1,12 @@
 import { levelOneConfig } from '../config/levelOne';
-import type { RunOutcome, SimulationResult } from '../sim/types';
+import type { LevelId, RunOutcome, SimulationResult } from '../sim/types';
 
 export type SessionPhase = 'editing' | 'running' | 'failed' | 'success';
 
 export type SessionFeedback = {
   message: string;
   detail: string;
+  details?: string[];
 };
 
 type OutcomeFeedbackRule = {
@@ -61,13 +62,49 @@ const outcomeFeedbackRules: Record<LevelOneFeedbackOutcome, OutcomeFeedbackRule>
 };
 
 export function deriveFeedback(input: {
+  activeLevel: LevelId;
   phase: SessionPhase;
   lastResult: SimulationResult | null;
   failureCount: number;
 }): SessionFeedback {
+  if (input.activeLevel === 'level-two') {
+    if (input.phase === 'running') {
+      return {
+        message: '正在观察顶点式轨道...',
+        detail: '先看看这条轨道能不能接住左侧平台，并把小滑手送到右侧平台。',
+      };
+    }
+
+    if (input.phase === 'success' && input.lastResult !== null) {
+      return {
+        message: '顶点和平台都对齐了。',
+        detail: input.lastResult.summary,
+      };
+    }
+
+    if (
+      input.phase === 'failed' &&
+      input.lastResult !== null &&
+      input.lastResult.levelId === 'level-two'
+    ) {
+      const details = input.lastResult.diagnostics.map((diagnostic) => diagnostic.message);
+
+      return {
+        message: '还有几处需要调整。',
+        detail: details.join(' '),
+        details,
+      };
+    }
+
+    return {
+      message: '先把顶点移进目标圆。',
+      detail: '先用 h、k 移动顶点位置，再用 a 调整开口方向和坡度。',
+    };
+  }
+
   if (input.phase === 'running') {
     return {
-      message: '正在观察这一趟滑行……',
+      message: '正在观察这一趟滑行...',
       detail: '先让滑手完整跑完这一条路线，再判断这条滑道到底行不行。',
     };
   }
@@ -91,6 +128,7 @@ export function deriveFeedback(input: {
 
   return {
     message: '先调一调 a，再按“开始滑行”。',
-    detail: `这条滑道是抛物线 y = ax²。现在平台位置固定不动，滑手要先从起点平台落到抛物线上，再一路滑向终点平台。`,
+    detail:
+      '这条滑道是抛物线 y = ax²。现在平台位置固定不动，滑手要先从起点平台落到抛物线上，再一路滑向终点平台。',
   };
 }

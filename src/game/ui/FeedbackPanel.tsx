@@ -5,7 +5,15 @@ export function FeedbackPanel(props: { feedback: SessionFeedback }): JSX.Element
     <section className="teaching-card feedback-panel" aria-labelledby="feedback-panel-title">
       <p className="eyebrow">{'\u6559\u5b66\u53cd\u9988'}</p>
       <h2 id="feedback-panel-title">{props.feedback.message}</h2>
-      <p>{props.feedback.detail}</p>
+      {props.feedback.details !== undefined && props.feedback.details.length > 0 ? (
+        <ul className="feedback-list">
+          {props.feedback.details.map((detail) => (
+            <li key={detail}>{detail}</li>
+          ))}
+        </ul>
+      ) : (
+        <p>{props.feedback.detail}</p>
+      )}
     </section>
   );
 }

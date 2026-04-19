@@ -3,6 +3,20 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import App from '../../src/app/App';
 
+async function completeLevelOneSuccess(): Promise<void> {
+  const teachingPanel = screen.getByRole('complementary', {
+    name: '教学面板',
+  });
+  const slider = within(teachingPanel).getByLabelText('参数 a');
+
+  fireEvent.change(slider, { target: { value: '0.8' } });
+  fireEvent.click(within(teachingPanel).getByRole('button', { name: '开始滑行' }));
+
+  await act(async () => {
+    await vi.runAllTimersAsync();
+  });
+}
+
 describe('App teaching layout', () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -61,7 +75,7 @@ describe('App teaching layout', () => {
 
     expect(within(teachingPanel).getByText('正在运行')).toBeInTheDocument();
     expect(
-      within(teachingPanel).getByRole('heading', { name: '正在观察这一趟滑行……' }),
+      within(teachingPanel).getByRole('heading', { name: '正在观察这一趟滑行...' }),
     ).toBeInTheDocument();
 
     await act(async () => {
@@ -85,5 +99,45 @@ describe('App teaching layout', () => {
       name: '重新调整',
     });
     expect(resetButton).toBeInTheDocument();
+  });
+
+  it('shows the level-two entry button after level-one success without auto-entering', async () => {
+    render(<App />);
+
+    await completeLevelOneSuccess();
+
+    const teachingPanel = screen.getByRole('complementary', {
+      name: '教学面板',
+    });
+
+    expect(
+      within(teachingPanel).getByRole('heading', { name: '第一关：感受 a 的力量' }),
+    ).toBeInTheDocument();
+    expect(
+      within(teachingPanel).queryByRole('heading', { name: '第二关：移动顶点' }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(teachingPanel).getByRole('button', { name: '进入第二关' }),
+    ).toBeInTheDocument();
+  });
+
+  it('enters level two only after clicking the entry button and shows vertex controls', async () => {
+    render(<App />);
+
+    await completeLevelOneSuccess();
+
+    const teachingPanel = screen.getByRole('complementary', {
+      name: '教学面板',
+    });
+
+    fireEvent.click(within(teachingPanel).getByRole('button', { name: '进入第二关' }));
+
+    expect(
+      within(teachingPanel).getByRole('heading', { name: '第二关：移动顶点' }),
+    ).toBeInTheDocument();
+    expect(within(teachingPanel).getByLabelText('参数 a')).toBeInTheDocument();
+    expect(within(teachingPanel).getByLabelText('参数 h')).toBeInTheDocument();
+    expect(within(teachingPanel).getByLabelText('参数 k')).toBeInTheDocument();
+    expect(within(teachingPanel).getByText('y = a(x - h)^2 + k')).toBeInTheDocument();
   });
 });

@@ -15,6 +15,20 @@ function createCanvasContextStub(): CanvasRenderingContext2D {
   return {} as CanvasRenderingContext2D;
 }
 
+async function completeLevelOneSuccess(): Promise<void> {
+  const teachingPanel = screen.getByRole('complementary', {
+    name: '教学面板',
+  });
+  const slider = within(teachingPanel).getByLabelText('参数 a');
+
+  fireEvent.change(slider, { target: { value: '0.8' } });
+  fireEvent.click(within(teachingPanel).getByRole('button', { name: '开始滑行' }));
+
+  await act(async () => {
+    await vi.runAllTimersAsync();
+  });
+}
+
 describe('App integration', () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -78,7 +92,7 @@ describe('App integration', () => {
 
     expect(within(teachingPanel).getByText('正在运行')).toBeInTheDocument();
     expect(
-      within(teachingPanel).getByRole('heading', { name: '正在观察这一趟滑行……' }),
+      within(teachingPanel).getByRole('heading', { name: '正在观察这一趟滑行...' }),
     ).toBeInTheDocument();
     expect(
       within(teachingPanel).queryByRole('region', { name: '本轮复盘' }),
@@ -235,5 +249,71 @@ describe('App integration', () => {
     expect(
       within(reviewPanel).getByText('做得不错，这条抛物线刚好形成平稳的谷底滑道。'),
     ).toBeInTheDocument();
+  });
+
+  it('does not enter level two automatically after level-one success', async () => {
+    render(<App />);
+
+    await completeLevelOneSuccess();
+
+    const teachingPanel = screen.getByRole('complementary', {
+      name: '教学面板',
+    });
+
+    expect(
+      within(teachingPanel).getByRole('heading', { name: '第一关：感受 a 的力量' }),
+    ).toBeInTheDocument();
+    expect(
+      within(teachingPanel).queryByRole('heading', { name: '第二关：移动顶点' }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(teachingPanel).getByRole('button', { name: '进入第二关' }),
+    ).toBeInTheDocument();
+  });
+
+  it('shows directional level-two diagnostics and resolves out of running', async () => {
+    render(<App />);
+
+    await completeLevelOneSuccess();
+
+    const teachingPanel = screen.getByRole('complementary', {
+      name: '教学面板',
+    });
+
+    fireEvent.click(within(teachingPanel).getByRole('button', { name: '进入第二关' }));
+    fireEvent.change(within(teachingPanel).getByLabelText('参数 a'), {
+      target: { value: '1.15' },
+    });
+    fireEvent.change(within(teachingPanel).getByLabelText('参数 h'), {
+      target: { value: '-0.35' },
+    });
+    fireEvent.change(within(teachingPanel).getByLabelText('参数 k'), {
+      target: { value: '1.85' },
+    });
+    fireEvent.click(within(teachingPanel).getByRole('button', { name: '开始滑行' }));
+
+    await act(async () => {
+      await vi.runAllTimersAsync();
+    });
+
+    expect(within(teachingPanel).queryByText('正在运行')).not.toBeInTheDocument();
+    expect(
+      within(teachingPanel).getByRole('heading', { name: '还有几处需要调整。' }),
+    ).toBeInTheDocument();
+
+    const feedbackPanel = within(teachingPanel)
+      .getByRole('heading', { name: '还有几处需要调整。' })
+      .closest('section') as HTMLElement;
+    expect(within(feedbackPanel).getByRole('list')).toBeInTheDocument();
+    expect(within(feedbackPanel).getByText(/偏右/)).toBeInTheDocument();
+    expect(within(feedbackPanel).getAllByText(/偏高/).length).toBeGreaterThan(0);
+    expect(within(feedbackPanel).queryByText(/-1\.1|1\.1[05]|0\.55/)).not.toBeInTheDocument();
+
+    const reviewPanel = within(teachingPanel).getByRole('region', {
+      name: '本轮复盘',
+    });
+    expect(within(reviewPanel).getByText(/a = 1\.15/)).toBeInTheDocument();
+    expect(within(reviewPanel).getByText(/h = -0\.35/)).toBeInTheDocument();
+    expect(within(reviewPanel).getByText(/k = 1\.85/)).toBeInTheDocument();
   });
 });

@@ -1,35 +1,56 @@
 import { useEffect, useRef, useState } from 'react';
 
 import '../styles/app.css';
-import { runSimulation } from '../game/sim/runSimulation';
-import type { SimulationResult } from '../game/sim/types';
+import { levelTwoConfig } from '../game/config/levelTwo';
+import { runLevelTwoSimulation, runSimulation } from '../game/sim/runSimulation';
+import type { LevelId, SimulationResult } from '../game/sim/types';
 import { useLevelSession } from '../game/state/useLevelSession';
-import { GameCanvas } from '../game/ui/GameCanvas';
 import { ControlPanel } from '../game/ui/ControlPanel';
 import { FeedbackPanel } from '../game/ui/FeedbackPanel';
+import { GameCanvas } from '../game/ui/GameCanvas';
 import { StatusBanner } from '../game/ui/StatusBanner';
 
 const PLAYBACK_DURATION_MS = 3000;
 const PLAYBACK_TICK_MS = 50;
 
+type FailedRunsByLevel = Record<LevelId, SimulationResult[]>;
+type GhostVisibilityByLevel = Record<LevelId, boolean>;
+
+const initialFailedRuns: FailedRunsByLevel = {
+  'level-one': [],
+  'level-two': [],
+};
+
+const initialGhostVisibility: GhostVisibilityByLevel = {
+  'level-one': true,
+  'level-two': true,
+};
+
 export default function App(): JSX.Element {
   const session = useLevelSession();
   const {
+    activeLevel,
     aValue,
     activeRunId,
     attemptCount,
+    canEnterLevelTwo,
+    enterLevelTwo,
     feedback,
     isSliderLocked,
     lastSimulationResult,
+    levelTwoParameters,
     phase,
     recordOutcome,
     resetRun,
     setAValue,
+    setLevelTwoParameter,
     startRun,
   } = session;
 
-  const [failedRuns, setFailedRuns] = useState<SimulationResult[]>([]);
-  const [showGhostTrails, setShowGhostTrails] = useState(true);
+  const [failedRunsByLevel, setFailedRunsByLevel] =
+    useState<FailedRunsByLevel>(initialFailedRuns);
+  const [showGhostTrailsByLevel, setShowGhostTrailsByLevel] =
+    useState<GhostVisibilityByLevel>(initialGhostVisibility);
   const [activePlaybackResult, setActivePlaybackResult] =
     useState<SimulationResult | null>(null);
   const [playbackProgress, setPlaybackProgress] = useState(0);
@@ -45,7 +66,11 @@ export default function App(): JSX.Element {
       return;
     }
 
-    const result = runSimulation({ a: aValue });
+    const result =
+      activeLevel === 'level-one'
+        ? runSimulation({ a: aValue })
+        : runLevelTwoSimulation(levelTwoParameters);
+
     setActivePlaybackResult(result);
     setPlaybackProgress(0);
 
@@ -66,10 +91,13 @@ export default function App(): JSX.Element {
     return () => {
       window.clearInterval(intervalId);
     };
-  }, [aValue, activeRunId, phase]);
+  }, [aValue, activeLevel, activeRunId, levelTwoParameters, phase]);
 
   useEffect(() => {
-    if (lastSimulationResult === null || lastSimulationResult === recordedResultRef.current) {
+    if (
+      lastSimulationResult === null ||
+      lastSimulationResult === recordedResultRef.current
+    ) {
       return;
     }
 
@@ -79,8 +107,17 @@ export default function App(): JSX.Element {
       return;
     }
 
-    setFailedRuns((currentRuns) => [...currentRuns, lastSimulationResult]);
-    setShowGhostTrails(true);
+    setFailedRunsByLevel((currentRuns) => ({
+      ...currentRuns,
+      [lastSimulationResult.levelId]: [
+        ...currentRuns[lastSimulationResult.levelId],
+        lastSimulationResult,
+      ],
+    }));
+    setShowGhostTrailsByLevel((currentVisibility) => ({
+      ...currentVisibility,
+      [lastSimulationResult.levelId]: true,
+    }));
   }, [lastSimulationResult]);
 
   function handleReset(): void {
@@ -89,29 +126,71 @@ export default function App(): JSX.Element {
     resetRun();
   }
 
+  const failedRuns = failedRunsByLevel[activeLevel];
+  const showGhostTrails = showGhostTrailsByLevel[activeLevel];
   const visibleSimulationResult =
     phase === 'running' ? activePlaybackResult : lastSimulationResult;
   const shouldShowReview =
     (phase === 'failed' || phase === 'success') && lastSimulationResult !== null;
   const reviewTone = phase === 'success' ? 'success' : 'failed';
+  const missionEyebrow =
+    activeLevel === 'level-one' ? '山谷训练场' : levelTwoConfig.mission.eyebrow;
+  const missionTitle =
+    activeLevel === 'level-one' ? '把滑手送到右侧平台' : levelTwoConfig.mission.title;
+  const missionCopy =
+    activeLevel === 'level-one'
+      ? '这条滑道是一条抛物线 y = ax²。你要把它调成一条能顺利滑过去的谷底滑道。'
+      : levelTwoConfig.mission.copy;
+  const reviewChip =
+    activeLevel === 'level-one'
+      ? `a = ${aValue.toFixed(2)}`
+      : `a = ${levelTwoParameters.a.toFixed(2)} | h = ${levelTwoParameters.h.toFixed(2)} | k = ${levelTwoParameters.k.toFixed(2)}`;
+  const successReviewDetail =
+    activeLevel === 'level-one'
+      ? '你已经找到能跨过缺口的 a 值，可以准备进入下一步学习。'
+      : '这条顶点式轨道已经和目标圆、左右平台都对齐了。';
 
   return (
     <main className="app-shell">
       <section className="game-view" aria-label="游戏视图">
         <section className="mission-brief" aria-labelledby="mission-brief-title">
-          <p className="eyebrow">山谷训练场</p>
-          <h2 id="mission-brief-title">把滑手送到右侧平台</h2>
+          <p className="eyebrow">{missionEyebrow}</p>
+          <h2 id="mission-brief-title">{missionTitle}</h2>
           <p className="mission-brief-copy">
-            这条滑道是一条抛物线 <code>y = ax²</code>。你要把它调成一条能顺利滑过去的谷底滑道。
+            {missionCopy.includes('y = ') ? (
+              <>
+                {activeLevel === 'level-one' ? (
+                  <>
+                    这条滑道是一条抛物线 <code>y = ax²</code>。你要把它调成一条能顺利滑过去的谷底滑道。
+                  </>
+                ) : (
+                  <>
+                    这一关使用 <code>y = a(x - h)^2 + k</code>。先用 <code>h</code> 和{' '}
+                    <code>k</code> 移动顶点，再用 <code>a</code> 调整开口和坡度。
+                  </>
+                )}
+              </>
+            ) : (
+              missionCopy
+            )}
           </p>
           <p className="mission-brief-formula">
-            <code>a</code> 决定开口方向和弯曲程度：<code>a &gt; 0</code> 时向上开口，<code>|a|</code>{' '}
-            越大，轨道越陡。
+            {activeLevel === 'level-one' ? (
+              <>
+                <code>a</code> 决定开口方向和弯曲程度，<code>a &gt; 0</code> 时向上开口，
+                <code>|a|</code> 越大，轨道越陡。
+              </>
+            ) : (
+              <>
+                <code>h</code> 和 <code>k</code> 负责移动顶点，<code>a</code>{' '}
+                负责调整开口和坡度。先把顶点送进目标圆，再检查左右平台是否接轨。
+              </>
+            )}
           </p>
         </section>
 
         <GameCanvas
-          aValue={aValue}
+          aValue={activeLevel === 'level-one' ? aValue : levelTwoParameters.a}
           ghostResults={showGhostTrails ? failedRuns : []}
           playbackProgress={
             phase === 'running' ? playbackProgress : lastSimulationResult === null ? 0 : 1
@@ -125,10 +204,13 @@ export default function App(): JSX.Element {
       <aside className="teaching-panel" aria-label="教学面板">
         <StatusBanner phase={phase} attemptCount={attemptCount} />
         <ControlPanel
+          activeLevel={activeLevel}
           aValue={aValue}
+          levelTwoParameters={levelTwoParameters}
           isSliderLocked={isSliderLocked}
           phase={phase}
           onAValueChange={setAValue}
+          onLevelTwoParameterChange={setLevelTwoParameter}
           onRun={startRun}
           onReset={handleReset}
         />
@@ -142,17 +224,25 @@ export default function App(): JSX.Element {
             <p className="eyebrow">结果复盘</p>
             <div className="run-review-header">
               <h2>{phase === 'success' ? '挑战成功' : `第 ${attemptCount} 次尝试`}</h2>
-              <span className="run-review-chip">a = {aValue.toFixed(2)}</span>
+              <span className="run-review-chip">{reviewChip}</span>
             </div>
 
             <p className="run-review-summary">
               {phase === 'success' ? lastSimulationResult.summary : feedback.message}
             </p>
             <p className="run-review-detail">
-              {phase === 'success'
-                ? '你已经找到能跨过缺口的 a 值，可以准备进入下一步学习。'
-                : feedback.detail}
+              {phase === 'success' ? successReviewDetail : feedback.detail}
             </p>
+
+            {activeLevel === 'level-one' && phase === 'success' && canEnterLevelTwo ? (
+              <button
+                type="button"
+                className="level-entry-button"
+                onClick={enterLevelTwo}
+              >
+                进入第二关
+              </button>
+            ) : null}
 
             {failedRuns.length > 0 ? (
               <div className="ghost-toggle-row">
@@ -160,7 +250,12 @@ export default function App(): JSX.Element {
                   <input
                     type="checkbox"
                     checked={showGhostTrails}
-                    onChange={() => setShowGhostTrails((currentValue) => !currentValue)}
+                    onChange={() =>
+                      setShowGhostTrailsByLevel((currentVisibility) => ({
+                        ...currentVisibility,
+                        [activeLevel]: !currentVisibility[activeLevel],
+                      }))
+                    }
                   />
                   <span>显示失败轨迹参考线</span>
                 </label>

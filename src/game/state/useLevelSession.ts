@@ -106,21 +106,12 @@ export function useLevelSession(): LevelSessionApi {
   const [state, setState] = useState<LevelSessionState>(initialState);
   const activeRunState = getActiveRunState(state);
 
-  const feedbackInput = {
+  const feedback = deriveFeedback({
     activeLevel: state.activeLevel,
     phase: activeRunState.phase,
     lastResult: activeRunState.lastSimulationResult,
     failureCount: activeRunState.failureCount,
-  };
-  const feedback =
-    state.activeLevel === 'level-two' &&
-    activeRunState.phase === 'failed' &&
-    activeRunState.lastSimulationResult?.levelId === 'level-two'
-      ? {
-          message: '还有几处需要调整。',
-          detail: activeRunState.lastSimulationResult.summary,
-        }
-      : deriveFeedback(feedbackInput);
+  });
 
   function setAValue(nextValue: number): void {
     setState((currentState) => {
@@ -182,18 +173,18 @@ export function useLevelSession(): LevelSessionApi {
 
   function startRun(): void {
     setState((currentState) => {
-      const activeRunState = getActiveRunState(currentState);
+      const runState = getActiveRunState(currentState);
 
-      if (activeRunState.phase !== 'editing') {
+      if (runState.phase !== 'editing') {
         return currentState;
       }
 
-      return updateActiveRunState(currentState, (runState) => ({
-        ...runState,
+      return updateActiveRunState(currentState, (currentRunState) => ({
+        ...currentRunState,
         phase: 'running',
-        attemptCount: runState.attemptCount + 1,
-        activeRunId: runState.nextRunId,
-        nextRunId: runState.nextRunId + 1,
+        attemptCount: currentRunState.attemptCount + 1,
+        activeRunId: currentRunState.nextRunId,
+        nextRunId: currentRunState.nextRunId + 1,
         isSliderLocked: true,
       }));
     });
@@ -201,13 +192,13 @@ export function useLevelSession(): LevelSessionApi {
 
   function recordOutcome(result: SimulationResult, runId: number): void {
     setState((currentState) => {
-      const activeRunState = getActiveRunState(currentState);
+      const runState = getActiveRunState(currentState);
 
-      if (activeRunState.phase !== 'running') {
+      if (runState.phase !== 'running') {
         return currentState;
       }
 
-      if (runId !== activeRunState.activeRunId) {
+      if (runId !== runState.activeRunId) {
         return currentState;
       }
 
@@ -215,13 +206,13 @@ export function useLevelSession(): LevelSessionApi {
         return currentState;
       }
 
-      const nextState = updateActiveRunState(currentState, (runState) => ({
-        ...runState,
+      const nextState = updateActiveRunState(currentState, (currentRunState) => ({
+        ...currentRunState,
         phase: result.outcome === 'success' ? 'success' : 'failed',
         failureCount:
           result.outcome === 'success'
-            ? runState.failureCount
-            : runState.failureCount + 1,
+            ? currentRunState.failureCount
+            : currentRunState.failureCount + 1,
         activeRunId: null,
         lastSimulationResult: result,
         isSliderLocked: true,
