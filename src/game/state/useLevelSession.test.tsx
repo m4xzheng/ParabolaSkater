@@ -273,4 +273,32 @@ describe('useLevelSession', () => {
     expect(result.current.activeLevel).toBe('level-two');
     expect(result.current.aValue).toBe(0.9);
   });
+
+  it('ignores cross-level outcomes for the active run', () => {
+    const { result } = renderHook(() => useLevelSession());
+
+    act(() => {
+      result.current.setAValue(0.9);
+      result.current.startRun();
+    });
+
+    const levelOneRunId = result.current.activeRunId;
+
+    act(() => {
+      result.current.recordOutcome(runSimulation({ a: 0.9 }), levelOneRunId!);
+      result.current.enterLevelTwo();
+      result.current.startRun();
+    });
+
+    const levelTwoRunId = result.current.activeRunId;
+
+    act(() => {
+      result.current.recordOutcome(runSimulation({ a: 0.9 }), levelTwoRunId!);
+    });
+
+    expect(result.current.activeLevel).toBe('level-two');
+    expect(result.current.phase).toBe('running');
+    expect(result.current.activeRunId).toBe(levelTwoRunId);
+    expect(result.current.lastSimulationResult).toBeNull();
+  });
 });

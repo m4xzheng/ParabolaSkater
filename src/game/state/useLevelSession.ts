@@ -200,6 +200,10 @@ export function useLevelSession(): LevelSessionApi {
         return currentState;
       }
 
+      if (result.levelId !== currentState.activeLevel) {
+        return currentState;
+      }
+
       const nextState = updateActiveRunState(currentState, (runState) => ({
         ...runState,
         phase: result.outcome === 'success' ? 'success' : 'failed',
