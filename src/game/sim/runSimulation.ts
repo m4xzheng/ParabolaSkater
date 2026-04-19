@@ -13,17 +13,17 @@ import type {
   FrameMotion,
   FrameState,
   LevelTwoDiagnostic,
+  LevelOneOutcome,
+  LevelOneSimulationResult,
   LevelTwoParameters,
+  LevelTwoSimulationResult,
   OutcomeMessageKey,
-  RunOutcome,
   SimulationFrame,
-  SimulationResult,
   SimulationSampling,
 } from './types';
 
 const LANDING_CLEARANCE = 0.12;
 const LEVEL_TWO_MESSAGE_KEY = 'simulation.level-two-diagnostics' as OutcomeMessageKey;
-type LevelOneOutcome = Exclude<RunOutcome, 'level-two-diagnostics'>;
 
 const outcomeSummary: Record<
   LevelOneOutcome,
@@ -51,7 +51,7 @@ const outcomeSummary: Record<
   },
 };
 
-export function runSimulation(input: { a: number }): SimulationResult {
+export function runSimulation(input: { a: number }): LevelOneSimulationResult {
   if (!Number.isFinite(input.a)) {
     throw new TypeError('runSimulation requires a finite numeric a value');
   }
@@ -73,11 +73,13 @@ export function runSimulation(input: { a: number }): SimulationResult {
   };
 }
 
-export function runLevelTwoSimulation(parameters: LevelTwoParameters): SimulationResult {
+export function runLevelTwoSimulation(
+  parameters: LevelTwoParameters,
+): LevelTwoSimulationResult {
   validateLevelTwoParameters(parameters);
 
   const diagnostics = getLevelTwoDiagnostics(parameters);
-  const outcome: RunOutcome =
+  const outcome: LevelTwoSimulationResult['outcome'] =
     diagnostics.length === 0 ? 'success' : 'level-two-diagnostics';
   const sampling = getLevelTwoSampling();
 
@@ -411,7 +413,7 @@ function addContactDiagnostic(
 
 function buildLevelTwoFrames(
   parameters: LevelTwoParameters,
-  outcome: RunOutcome,
+  outcome: LevelTwoSimulationResult['outcome'],
   sampling: SimulationSampling,
 ): SimulationFrame[] {
   const startPlatform = levelTwoConfig.platforms.start;
@@ -431,6 +433,7 @@ function buildLevelTwoFrames(
 
   const vertex = getVertex(parameters);
   const rideEndX = Math.min(trackGoal.x, round(vertex.x + 1.2));
+  const rideEndPoint = getLevelTwoTrackPoint(parameters, rideEndX);
   const crashPoint = {
     x: round(Math.min(levelTwoConfig.geometry.rightContactX, vertex.x + 1.4)),
     y: round(vertex.y - 1.8),
@@ -440,7 +443,7 @@ function buildLevelTwoFrames(
     mergeStateLists(
       buildLinearStates(startPlatform, trackStart, 5, 'drop'),
       buildLevelTwoTrackStates(parameters, trackStart.x, rideEndX, sampling.frameStep),
-      buildLinearStates(getLevelTwoTrackPoint(parameters, vertex.x), crashPoint, 4, 'crash'),
+      buildLinearStates(rideEndPoint, crashPoint, 4, 'crash'),
     ),
   );
 }

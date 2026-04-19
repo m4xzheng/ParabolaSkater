@@ -22,13 +22,16 @@ export type LevelTwoDiagnostic = {
   message: string;
 };
 
-export type RunOutcome =
+export type LevelOneOutcome =
   | 'success'
   | 'opens-down'
   | 'too-flat'
   | 'too-steep'
-  | 'misses-track'
-  | 'level-two-diagnostics';
+  | 'misses-track';
+
+export type LevelTwoOutcome = 'success' | 'level-two-diagnostics';
+
+export type RunOutcome = LevelOneOutcome | LevelTwoOutcome;
 export type OutcomeMessageKey = `simulation.${RunOutcome}`;
 
 export type FrameMotion = 'drop' | 'ride' | 'jump' | 'crash';
@@ -51,14 +54,30 @@ export type SimulationSampling = {
   frameStep: number;
 };
 
-export type SimulationResult = {
-  levelId: LevelId;
-  parameters: LevelOneParameters | LevelTwoParameters;
+export type LevelOneSimulationResult = {
+  levelId: 'level-one';
+  parameters: LevelOneParameters;
   a: number;
-  outcome: RunOutcome;
+  outcome: LevelOneOutcome;
+  messageKey: OutcomeMessageKey;
+  summary: string;
+  diagnostics: [];
+  sampling: SimulationSampling;
+  frames: SimulationFrame[];
+};
+
+export type LevelTwoSimulationResult = {
+  levelId: 'level-two';
+  parameters: LevelTwoParameters;
+  a: number;
+  outcome: LevelTwoOutcome;
   messageKey: OutcomeMessageKey;
   summary: string;
   diagnostics: LevelTwoDiagnostic[];
   sampling: SimulationSampling;
   frames: SimulationFrame[];
 };
+
+export type SimulationResult =
+  | LevelOneSimulationResult
+  | LevelTwoSimulationResult;

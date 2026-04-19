@@ -93,6 +93,8 @@ describe('runLevelTwoSimulation', () => {
 
     expect(result.levelId).toBe('level-two');
     expect(result.outcome).toBe('success');
+    expect(result.messageKey).toBe('simulation.success');
+    expect(result.summary).toBe('顶点已经进入目标圆，左右平台也对齐了。');
     expect(result.diagnostics).toEqual([]);
     expect(result.frames[0]).toMatchObject({
       index: 0,
@@ -160,6 +162,26 @@ describe('runLevelTwoSimulation', () => {
     );
   });
 
+  it('keeps the crash segment moving forward from the ride endpoint on failing runs', () => {
+    const result = runLevelTwoSimulation({ a: 1.15, h: -0.35, k: 1.85 });
+    const lastRideIndex = result.frames.reduce(
+      (lastIndex, frame, index) => (frame.state.motion === 'ride' ? index : lastIndex),
+      -1,
+    );
+    const firstCrashIndex = result.frames.findIndex((frame) => frame.state.motion === 'crash');
+
+    expect(result.outcome).toBe('level-two-diagnostics');
+    expect(lastRideIndex).toBeGreaterThanOrEqual(0);
+    expect(firstCrashIndex).toBeGreaterThan(lastRideIndex);
+
+    const lastRideFrame = result.frames[lastRideIndex];
+    const firstCrashFrame = result.frames[firstCrashIndex];
+
+    expect(firstCrashFrame.state.mathPosition.x).toBeGreaterThanOrEqual(
+      lastRideFrame.state.mathPosition.x,
+    );
+  });
+
   it('keeps negative-a diagnostics exclusive to opens-down', () => {
     const result = runLevelTwoSimulation({ a: -0.2, h: -1.1, k: 1.15 });
 
@@ -174,6 +196,13 @@ describe('runLevelTwoSimulation', () => {
         expect.objectContaining({ code: 'a-too-flat' }),
       ]),
     );
+  });
+
+  it('rejects non-finite h and k inputs', () => {
+    expect(() => runLevelTwoSimulation({ a: 0.55, h: Number.NaN, k: 1.15 })).toThrow(/finite/i);
+    expect(() =>
+      runLevelTwoSimulation({ a: 0.55, h: -1.1, k: Number.POSITIVE_INFINITY }),
+    ).toThrow(/finite/i);
   });
 
   it('matches the platform heights at the configured contact points', () => {
