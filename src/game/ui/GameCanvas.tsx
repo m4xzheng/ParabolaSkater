@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 
-import type { SimulationResult } from '../sim/types';
 import { drawLevel } from '../render/drawLevel';
+import type { SimulationResult } from '../sim/types';
 import type { SessionPhase } from '../state/feedback';
 
 const CANVAS_WIDTH = 720;
@@ -10,6 +10,7 @@ const CANVAS_HEIGHT = 480;
 export function GameCanvas(props: {
   aValue: number;
   ghostResults: SimulationResult[];
+  playbackProgress: number;
   phase: SessionPhase;
   showGhostTrails: boolean;
   simulationResult: SimulationResult | null;
@@ -46,6 +47,7 @@ export function GameCanvas(props: {
       height: CANVAS_HEIGHT,
       a: props.aValue,
       ghostResults: props.ghostResults,
+      playbackProgress: props.playbackProgress,
       phase: props.phase,
       showGhostTrails: props.showGhostTrails,
       simulationResult: props.simulationResult,
@@ -53,6 +55,7 @@ export function GameCanvas(props: {
   }, [
     props.aValue,
     props.ghostResults,
+    props.playbackProgress,
     props.phase,
     props.showGhostTrails,
     props.simulationResult,
@@ -65,10 +68,10 @@ export function GameCanvas(props: {
         className="game-canvas"
         width={CANVAS_WIDTH}
         height={CANVAS_HEIGHT}
-        aria-label="Parabola level canvas"
+        aria-label="抛物线关卡画布"
       />
       <figcaption className="game-canvas-caption">
-        {'\u5de6\u4fa7\u662f\u6ed1\u9053\u89c6\u56fe\uff0c\u53f3\u4fa7\u6559\u5b66\u9762\u677f\u4f1a\u5e2e\u4f60\u89e3\u8bfb a \u7684\u53d8\u5316\u3002'}
+        看滑手从左侧平台出发，沿着抛物线滑道穿过谷底，滑向右侧目标平台。
       </figcaption>
     </figure>
   );

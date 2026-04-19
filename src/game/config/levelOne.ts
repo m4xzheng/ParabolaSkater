@@ -17,6 +17,16 @@ export const levelOneConfig = {
     spawnX: -2.4,
     landingX: 2.4,
   },
+  platforms: {
+    start: {
+      x: -2.4,
+      y: 6.6,
+    },
+    goal: {
+      x: 2.4,
+      y: 4.8,
+    },
+  },
   simulation: {
     frameSampleStride: 4,
   },

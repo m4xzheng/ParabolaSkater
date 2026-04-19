@@ -1,60 +1,56 @@
 import { describe, expect, it } from 'vitest';
+
 import { levelOneConfig } from '../config/levelOne';
 import { runSimulation } from './runSimulation';
 
 describe('runSimulation', () => {
-  it('returns success with animation-ready frames for a teachable value', () => {
+  it('starts from the fixed launch platform, lands on the track, and finishes on the fixed goal platform for a viable value', () => {
     const result = runSimulation({ a: 0.8 });
 
     expect(result.outcome).toBe('success');
     expect(result.messageKey).toBe('simulation.success');
-    expect(result.summary).toBe('Nice work: this parabola makes a smooth valley track.');
-    expect(result.sampling).toEqual({
-      domainSampleStep: levelOneConfig.domain.sampleStep,
-      frameSampleStride: levelOneConfig.simulation.frameSampleStride,
-      frameStep:
-        levelOneConfig.domain.sampleStep *
-        levelOneConfig.simulation.frameSampleStride,
-    });
-    expect(result.frames).toHaveLength(13);
     expect(result.frames[0]).toMatchObject({
       index: 0,
       progress: 0,
       state: {
-        mathPosition: { x: -2.4, y: 4.608 },
-        slope: -3.84,
-      },
-    });
-    expect(result.frames.at(-1)).toMatchObject({
-      index: 12,
-      progress: 1,
-      state: {
-        mathPosition: { x: 2.4, y: 4.608 },
-        slope: 3.84,
-      },
-    });
-    expect(result.frames[6]).toMatchObject({
-      index: 6,
-      progress: 0.5,
-      state: {
-        mathPosition: { x: 0, y: 0 },
+        motion: 'drop',
+        mathPosition: levelOneConfig.platforms.start,
         slope: 0,
       },
     });
-    expect(result.frames[12]?.state).not.toHaveProperty('screenPosition');
-    expect(result.frames[1]?.state.mathPosition.x).toBeCloseTo(
-      result.frames[0]!.state.mathPosition.x + result.sampling.frameStep,
-      4,
-    );
+    expect(result.frames.some((frame) => frame.state.motion === 'ride')).toBe(true);
+    expect(result.frames.at(-1)).toMatchObject({
+      index: result.frames.length - 1,
+      progress: 1,
+      state: {
+        motion: 'jump',
+        mathPosition: levelOneConfig.platforms.goal,
+        slope: 0,
+      },
+    });
   });
 
-  it('classifies negative a values as opens-down', () => {
+  it('does not let an opens-down parabola reach the goal platform', () => {
     const result = runSimulation({ a: -0.2 });
 
     expect(result.outcome).toBe('opens-down');
     expect(result.messageKey).toBe('simulation.opens-down');
-    expect(result.summary).toBe(
-      'Try a positive a so the parabola opens upward into a valley.',
+    expect(result.frames.some((frame) => frame.state.motion === 'ride')).toBe(true);
+    expect(result.frames.at(-1)?.state.motion).toBe('crash');
+    expect(result.frames.at(-1)?.state.mathPosition.x).toBeLessThan(
+      levelOneConfig.platforms.goal.x - 0.5,
+    );
+  });
+
+  it('treats missing the track after launch as a dedicated failure case', () => {
+    const result = runSimulation({ a: 1.5 });
+
+    expect(result.outcome).toBe('misses-track');
+    expect(result.messageKey).toBe('simulation.misses-track');
+    expect(result.frames.every((frame) => frame.state.motion !== 'ride')).toBe(true);
+    expect(result.frames.at(-1)?.state.mathPosition.x).toBeCloseTo(
+      levelOneConfig.platforms.start.x,
+      4,
     );
   });
 
@@ -65,35 +61,22 @@ describe('runSimulation', () => {
 
     expect(result.outcome).toBe('too-flat');
     expect(result.messageKey).toBe('simulation.too-flat');
-    expect(result.summary).toBe(
-      'Increase a a bit so the track dips enough to build speed.',
+    expect(result.frames.at(-1)?.state.mathPosition.x).toBeLessThan(
+      levelOneConfig.platforms.goal.x,
     );
   });
 
-  it('classifies steep upward parabolas as too-steep', () => {
+  it('classifies steep but reachable upward parabolas as too-steep', () => {
     const result = runSimulation({
       a: levelOneConfig.thresholds.success.max + levelOneConfig.slider.step,
     });
 
     expect(result.outcome).toBe('too-steep');
     expect(result.messageKey).toBe('simulation.too-steep');
-    expect(result.summary).toBe('Lower a a little so the track is easier to ride.');
-  });
-
-  it('treats success band boundaries as success', () => {
-    expect(runSimulation({ a: levelOneConfig.thresholds.success.min }).outcome).toBe(
-      'success',
+    expect(result.frames.some((frame) => frame.state.motion === 'ride')).toBe(true);
+    expect(result.frames.at(-1)?.state.mathPosition.x).toBeLessThanOrEqual(
+      levelOneConfig.platforms.goal.x,
     );
-    expect(runSimulation({ a: levelOneConfig.thresholds.success.max }).outcome).toBe(
-      'success',
-    );
-  });
-
-  it('treats zero as too-flat', () => {
-    const result = runSimulation({ a: 0 });
-
-    expect(result.outcome).toBe('too-flat');
-    expect(result.messageKey).toBe('simulation.too-flat');
   });
 
   it('rejects non-finite a inputs', () => {

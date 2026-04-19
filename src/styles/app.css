@@ -26,7 +26,7 @@ body {
 .app-shell {
   min-height: 100vh;
   display: grid;
-  grid-template-columns: minmax(0, 1.3fr) minmax(320px, 0.9fr);
+  grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.85fr);
   gap: 24px;
   align-items: stretch;
   padding: 24px;
@@ -38,9 +38,12 @@ body {
 }
 
 .game-view {
-  display: flex;
+  display: grid;
+  gap: 16px;
+  align-content: start;
 }
 
+.mission-brief,
 .game-canvas-frame,
 .teaching-card,
 .status-banner {
@@ -48,6 +51,41 @@ body {
   background: rgba(255, 255, 255, 0.82);
   box-shadow: 0 24px 80px rgba(15, 23, 42, 0.15);
   backdrop-filter: blur(14px);
+}
+
+.mission-brief,
+.teaching-card {
+  padding: 28px;
+}
+
+.mission-brief h2,
+.feedback-panel h2 {
+  margin: 0;
+  font-size: 1.7rem;
+}
+
+.mission-brief-copy,
+.mission-brief-formula,
+.panel-description,
+.panel-note,
+.feedback-panel p,
+.game-canvas-caption,
+.control-hint {
+  margin: 16px 0 0;
+  font-size: 1.02rem;
+  line-height: 1.7;
+  color: #334155;
+}
+
+.mission-brief code,
+.panel-description code,
+.panel-note code {
+  padding: 0.08rem 0.4rem;
+  border-radius: 999px;
+  background: rgba(37, 99, 235, 0.08);
+  color: #1d4ed8;
+  font-family: "Consolas", "SFMono-Regular", monospace;
+  font-size: 0.96em;
 }
 
 .game-canvas-frame {
@@ -63,14 +101,8 @@ body {
   width: 100%;
   height: auto;
   display: block;
-  border-radius: 20px;
-  background: linear-gradient(180deg, #fefce8 0%, #eff6ff 100%);
-}
-
-.game-canvas-caption {
-  margin: 0;
-  color: #475569;
-  line-height: 1.6;
+  border-radius: 22px;
+  background: linear-gradient(180deg, #dbf2ff 0%, #fefce8 100%);
 }
 
 .teaching-panel {
@@ -98,10 +130,6 @@ body {
   color: #64748b;
 }
 
-.teaching-card {
-  padding: 28px;
-}
-
 .eyebrow {
   margin: 0 0 12px;
   text-transform: uppercase;
@@ -114,14 +142,6 @@ h1 {
   margin: 0;
   font-size: clamp(2rem, 4vw, 3.5rem);
   line-height: 1.1;
-}
-
-.panel-description,
-.feedback-panel p {
-  margin: 16px 0 0;
-  font-size: 1.02rem;
-  line-height: 1.7;
-  color: #334155;
 }
 
 .control-form {
@@ -159,11 +179,6 @@ h1 {
 .control-form button:disabled {
   cursor: progress;
   opacity: 0.75;
-}
-
-.feedback-panel h2 {
-  margin: 0;
-  font-size: 1.6rem;
 }
 
 .run-review-panel {

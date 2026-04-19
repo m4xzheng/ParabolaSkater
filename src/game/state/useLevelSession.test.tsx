@@ -61,8 +61,8 @@ describe('useLevelSession', () => {
     });
 
     expect(result.current.phase).toBe('failed');
-    expect(result.current.feedback.message).toContain('Increase a a bit');
-    expect(result.current.feedback.detail).toContain('deeper dip');
+    expect(result.current.feedback.message).toContain('把 a 再调大一点');
+    expect(result.current.feedback.detail).toContain('速度积累不起来');
     expect(result.current.attemptCount).toBe(1);
 
     act(() => {
@@ -79,7 +79,7 @@ describe('useLevelSession', () => {
 
     expect(result.current.phase).toBe('failed');
     expect(result.current.attemptCount).toBe(2);
-    expect(result.current.feedback.message).toContain('still too flat');
+    expect(result.current.feedback.message).toContain('轨道还是太平了');
     expect(result.current.feedback.detail).toContain('0.45');
     expect(result.current.feedback.detail).toContain('1.05');
   });

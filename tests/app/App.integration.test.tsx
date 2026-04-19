@@ -32,9 +32,9 @@ describe('App integration', () => {
   it('renders the game view on the left and the teaching panel on the right', () => {
     render(<App />);
 
-    const gameView = screen.getByRole('region', { name: 'Game view' });
+    const gameView = screen.getByRole('region', { name: '游戏视图' });
     const teachingPanel = screen.getByRole('complementary', {
-      name: 'Teaching panel',
+      name: '教学面板',
     });
 
     expect(gameView).toBeInTheDocument();
@@ -43,113 +43,115 @@ describe('App integration', () => {
       Node.DOCUMENT_POSITION_FOLLOWING,
     );
 
-    expect(within(gameView).getByLabelText('Parabola level canvas')).toBeInTheDocument();
-
+    expect(within(gameView).getByLabelText('抛物线关卡画布')).toBeInTheDocument();
     expect(
-      within(teachingPanel).getByRole('heading', {
-        name: '\u7b2c\u4e00\u5173\uff1a\u611f\u53d7 a \u7684\u529b\u91cf',
-      }),
+      within(gameView).getByRole('heading', { name: '把滑手送到右侧平台' }),
     ).toBeInTheDocument();
+    expect(within(gameView).getByText('山谷训练场')).toBeInTheDocument();
+    expect(within(gameView).getByText(/这条滑道是一条抛物线/)).toBeInTheDocument();
     expect(
-      within(teachingPanel).getByText('\u8c03\u6574 a \u6765\u6539\u53d8\u629b\u7269\u7ebf\u5f27\u7ebf\u3002'),
+      within(gameView).getByText(/越大，轨道越陡。/, { selector: 'p' }),
     ).toBeInTheDocument();
-    expect(
-      within(teachingPanel).getByRole('button', { name: 'Go' }),
-    ).toBeInTheDocument();
-    expect(
-      within(teachingPanel).getByLabelText('\u53c2\u6570 a'),
-    ).toBeInTheDocument();
-    expect(
-      within(teachingPanel).getByText('Adjust a to shape the track.'),
-    ).toBeInTheDocument();
+    expect(within(teachingPanel).getByRole('button', { name: '开始滑行' })).toBeInTheDocument();
   });
 
-  it('shows a running seam before resolving the run and resets back to editing', async () => {
+  it('keeps animating the run before the result is resolved', async () => {
     render(<App />);
 
     const teachingPanel = screen.getByRole('complementary', {
-      name: 'Teaching panel',
+      name: '教学面板',
     });
-    const slider = within(teachingPanel).getByLabelText('\u53c2\u6570 a');
+    const slider = within(teachingPanel).getByLabelText('参数 a');
+
+    const initialCall = drawLevelSpy.mock.calls.at(-1);
+    expect(initialCall?.[1]).toMatchObject({
+      playbackProgress: 0,
+      showGhostTrails: true,
+    });
 
     fireEvent.change(slider, { target: { value: '0.2' } });
-    fireEvent.click(within(teachingPanel).getByRole('button', { name: 'Go' }));
+    fireEvent.click(within(teachingPanel).getByRole('button', { name: '开始滑行' }));
 
-    expect(within(teachingPanel).getByText('\u6b63\u5728\u8fd0\u884c')).toBeInTheDocument();
-    expect(within(teachingPanel).getByText('Running the track...')).toBeInTheDocument();
-    expect(slider).toBeDisabled();
-    expect(within(teachingPanel).getByRole('button', { name: 'Go' })).toBeDisabled();
+    await act(async () => {
+      vi.advanceTimersByTime(1200);
+    });
+
+    expect(within(teachingPanel).getByText('正在运行')).toBeInTheDocument();
+    expect(
+      within(teachingPanel).getByRole('heading', { name: '正在观察这一趟滑行……' }),
+    ).toBeInTheDocument();
+    expect(
+      within(teachingPanel).queryByRole('region', { name: '本轮复盘' }),
+    ).not.toBeInTheDocument();
+
+    const midRunCall = drawLevelSpy.mock.calls.at(-1);
+    expect(midRunCall?.[1].playbackProgress).toBeGreaterThan(0.2);
+    expect(midRunCall?.[1].playbackProgress).toBeLessThan(0.8);
+    expect(midRunCall?.[1].simulationResult?.outcome).toBe('too-flat');
 
     await act(async () => {
       await vi.runAllTimersAsync();
     });
 
     expect(
-      within(teachingPanel).getByRole('heading', { name: 'Increase a a bit.' }),
+      within(teachingPanel).getByRole('heading', { name: '把 a 再调大一点。' }),
     ).toBeInTheDocument();
-
-    const resetButton = within(teachingPanel).getByRole('button', {
-      name: 'Try again',
-    });
-    expect(resetButton).toBeInTheDocument();
-
-    fireEvent.click(resetButton);
-
-    expect(within(teachingPanel).getByText('\u51c6\u5907\u8c03\u53c2')).toBeInTheDocument();
-    expect(within(teachingPanel).getByText('Adjust a to shape the track.')).toBeInTheDocument();
-    expect(slider).not.toBeDisabled();
-    expect(within(teachingPanel).getByRole('button', { name: 'Go' })).toBeEnabled();
+    expect(
+      within(teachingPanel).getByRole('region', { name: '本轮复盘' }),
+    ).toBeInTheDocument();
   });
 
   it('escalates shallow-run feedback and keeps failed ghost review available', async () => {
     render(<App />);
 
     const teachingPanel = screen.getByRole('complementary', {
-      name: 'Teaching panel',
+      name: '教学面板',
     });
-    const slider = within(teachingPanel).getByLabelText('\u53c2\u6570 a');
+    const slider = within(teachingPanel).getByLabelText('参数 a');
 
     fireEvent.change(slider, { target: { value: '0.2' } });
-    fireEvent.click(within(teachingPanel).getByRole('button', { name: 'Go' }));
+    fireEvent.click(within(teachingPanel).getByRole('button', { name: '开始滑行' }));
 
     await act(async () => {
       await vi.runAllTimersAsync();
     });
 
     const reviewPanel = within(teachingPanel).getByRole('region', {
-      name: 'Run review',
+      name: '本轮复盘',
     });
-    expect(within(reviewPanel).getByText('Run 1')).toBeInTheDocument();
-    expect(within(reviewPanel).getByText('Increase a a bit.')).toBeInTheDocument();
+    expect(within(reviewPanel).getByText('第 1 次尝试')).toBeInTheDocument();
+    expect(within(reviewPanel).getByText('把 a 再调大一点。')).toBeInTheDocument();
     expect(
-      within(reviewPanel).getByRole('checkbox', { name: 'Show failed ghost trails' }),
+      within(reviewPanel).getByRole('checkbox', { name: '显示失败轨迹参考线' }),
     ).toBeChecked();
 
-    fireEvent.click(within(teachingPanel).getByRole('button', { name: 'Try again' }));
+    fireEvent.click(within(teachingPanel).getByRole('button', { name: '重新调整' }));
     fireEvent.change(slider, { target: { value: '0.15' } });
-    fireEvent.click(within(teachingPanel).getByRole('button', { name: 'Go' }));
+    fireEvent.click(within(teachingPanel).getByRole('button', { name: '开始滑行' }));
 
     await act(async () => {
       await vi.runAllTimersAsync();
     });
 
     expect(
-      within(teachingPanel).getByRole('heading', { name: 'The track is still too flat.' }),
+      within(teachingPanel).getByRole('heading', { name: '轨道还是太平了。' }),
     ).toBeInTheDocument();
 
     const repeatedReviewPanel = within(teachingPanel).getByRole('region', {
-      name: 'Run review',
+      name: '本轮复盘',
     });
-    expect(within(repeatedReviewPanel).getByText('Run 2')).toBeInTheDocument();
+    expect(within(repeatedReviewPanel).getByText('第 2 次尝试')).toBeInTheDocument();
     expect(
       within(repeatedReviewPanel).getByText(
-        'Aim for an a value between 0.45 to 1.05 to deepen the track.',
+        '试着把 a 调到 0.45 到 1.05 之间，让轨道更有下坠感。',
       ),
     ).toBeInTheDocument();
-    expect(within(repeatedReviewPanel).getByText('2 failed ghost trail(s) ready to compare.')).toBeInTheDocument();
+    expect(
+      within(repeatedReviewPanel).getByText('已记录 2 次失败轨迹，可对照观察。'),
+    ).toBeInTheDocument();
 
     const ghostToggle = within(repeatedReviewPanel).getByRole('checkbox', {
-      name: 'Show failed ghost trails',
+      name: '显示失败轨迹参考线',
     });
     fireEvent.click(ghostToggle);
     expect(ghostToggle).not.toBeChecked();
@@ -159,18 +161,12 @@ describe('App integration', () => {
     render(<App />);
 
     const teachingPanel = screen.getByRole('complementary', {
-      name: 'Teaching panel',
+      name: '教学面板',
     });
-    const slider = within(teachingPanel).getByLabelText('\u53c2\u6570 a');
-
-    const initialGhostCall = drawLevelSpy.mock.calls.at(-1);
-    expect(initialGhostCall?.[1]).toMatchObject({
-      ghostResults: [],
-      showGhostTrails: true,
-    });
+    const slider = within(teachingPanel).getByLabelText('参数 a');
 
     fireEvent.change(slider, { target: { value: '0.2' } });
-    fireEvent.click(within(teachingPanel).getByRole('button', { name: 'Go' }));
+    fireEvent.click(within(teachingPanel).getByRole('button', { name: '开始滑行' }));
 
     await act(async () => {
       await vi.runAllTimersAsync();
@@ -179,12 +175,13 @@ describe('App integration', () => {
     const firstFailureCall = drawLevelSpy.mock.calls.at(-1);
     expect(firstFailureCall?.[1]).toMatchObject({
       showGhostTrails: true,
+      playbackProgress: 1,
     });
     expect(firstFailureCall?.[1].ghostResults).toHaveLength(1);
 
-    fireEvent.click(within(teachingPanel).getByRole('button', { name: 'Try again' }));
+    fireEvent.click(within(teachingPanel).getByRole('button', { name: '重新调整' }));
     fireEvent.change(slider, { target: { value: '0.15' } });
-    fireEvent.click(within(teachingPanel).getByRole('button', { name: 'Go' }));
+    fireEvent.click(within(teachingPanel).getByRole('button', { name: '开始滑行' }));
 
     await act(async () => {
       await vi.runAllTimersAsync();
@@ -193,12 +190,13 @@ describe('App integration', () => {
     const secondFailureCall = drawLevelSpy.mock.calls.at(-1);
     expect(secondFailureCall?.[1]).toMatchObject({
       showGhostTrails: true,
+      playbackProgress: 1,
     });
     expect(secondFailureCall?.[1].ghostResults).toHaveLength(2);
 
     fireEvent.click(
       within(teachingPanel).getByRole('checkbox', {
-        name: 'Show failed ghost trails',
+        name: '显示失败轨迹参考线',
       }),
     );
 
@@ -213,29 +211,29 @@ describe('App integration', () => {
     render(<App />);
 
     const teachingPanel = screen.getByRole('complementary', {
-      name: 'Teaching panel',
+      name: '教学面板',
     });
-    const slider = within(teachingPanel).getByLabelText('\u53c2\u6570 a');
+    const slider = within(teachingPanel).getByLabelText('参数 a');
 
     fireEvent.change(slider, { target: { value: '0.8' } });
-    fireEvent.click(within(teachingPanel).getByRole('button', { name: 'Go' }));
+    fireEvent.click(within(teachingPanel).getByRole('button', { name: '开始滑行' }));
 
     await act(async () => {
       await vi.runAllTimersAsync();
     });
 
-    expect(within(teachingPanel).getByText('\u8fc7\u5173')).toBeInTheDocument();
+    expect(within(teachingPanel).getByText('过关')).toBeInTheDocument();
     expect(
-      within(teachingPanel).getByText('Nice work: that track carries the skater across.'),
+      within(teachingPanel).getByText('这条轨道能把小滑手稳稳送到对面。'),
     ).toBeInTheDocument();
 
     const reviewPanel = within(teachingPanel).getByRole('region', {
-      name: 'Run review',
+      name: '本轮复盘',
     });
-    expect(within(reviewPanel).getByText('Success')).toBeInTheDocument();
+    expect(within(reviewPanel).getByText('挑战成功')).toBeInTheDocument();
     expect(within(reviewPanel).getByText('a = 0.80')).toBeInTheDocument();
     expect(
-      within(reviewPanel).getByText('Nice work: this parabola makes a smooth valley track.'),
+      within(reviewPanel).getByText('做得不错，这条抛物线刚好形成平稳的谷底滑道。'),
     ).toBeInTheDocument();
   });
 });

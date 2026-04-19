@@ -14,12 +14,12 @@ describe('App teaching layout', () => {
     vi.useRealTimers();
   });
 
-  it('renders the game view on the left and the teaching panel on the right', () => {
+  it('renders a mission-style game view alongside the teaching panel', () => {
     render(<App />);
 
-    const gameView = screen.getByRole('region', { name: 'Game view' });
+    const gameView = screen.getByRole('region', { name: '游戏视图' });
     const teachingPanel = screen.getByRole('complementary', {
-      name: 'Teaching panel',
+      name: '教学面板',
     });
 
     expect(gameView).toBeInTheDocument();
@@ -28,61 +28,62 @@ describe('App teaching layout', () => {
       Node.DOCUMENT_POSITION_FOLLOWING,
     );
 
-    expect(within(gameView).getByLabelText('Parabola level canvas')).toBeInTheDocument();
+    expect(within(gameView).getByLabelText('抛物线关卡画布')).toBeInTheDocument();
+    expect(
+      within(gameView).getByRole('heading', { name: '把滑手送到右侧平台' }),
+    ).toBeInTheDocument();
+    expect(within(gameView).getByText('山谷训练场')).toBeInTheDocument();
+    expect(within(gameView).getByText(/这条滑道是一条抛物线/)).toBeInTheDocument();
+    expect(
+      within(gameView).getByText(/越大，轨道越陡。/, { selector: 'p' }),
+    ).toBeInTheDocument();
 
     expect(
       within(teachingPanel).getByRole('heading', {
-        name: '\u7b2c\u4e00\u5173\uff1a\u611f\u53d7 a \u7684\u529b\u91cf',
+        name: '第一关：感受 a 的力量',
       }),
     ).toBeInTheDocument();
-    expect(
-      within(teachingPanel).getByText('\u8c03\u6574 a \u6765\u6539\u53d8\u629b\u7269\u7ebf\u5f27\u7ebf\u3002'),
-    ).toBeInTheDocument();
-    expect(
-      within(teachingPanel).getByRole('button', { name: 'Go' }),
-    ).toBeInTheDocument();
-    expect(
-      within(teachingPanel).getByLabelText('\u53c2\u6570 a'),
-    ).toBeInTheDocument();
-    expect(
-      within(teachingPanel).getByText('Adjust a to shape the track.'),
-    ).toBeInTheDocument();
+    expect(within(teachingPanel).getByRole('button', { name: '开始滑行' })).toBeInTheDocument();
+    expect(within(teachingPanel).getByLabelText('参数 a')).toBeInTheDocument();
+    expect(within(teachingPanel).getByText(/滑道满足/)).toBeInTheDocument();
   });
 
-  it('shows a running seam before resolving the run and resets back to editing', async () => {
+  it('stays in a visible playback state before resolving the run', async () => {
     render(<App />);
 
     const teachingPanel = screen.getByRole('complementary', {
-      name: 'Teaching panel',
+      name: '教学面板',
     });
-    const slider = within(teachingPanel).getByLabelText('\u53c2\u6570 a');
+    const slider = within(teachingPanel).getByLabelText('参数 a');
 
     fireEvent.change(slider, { target: { value: '0.2' } });
-    fireEvent.click(within(teachingPanel).getByRole('button', { name: 'Go' }));
+    fireEvent.click(within(teachingPanel).getByRole('button', { name: '开始滑行' }));
 
-    expect(within(teachingPanel).getByText('\u6b63\u5728\u8fd0\u884c')).toBeInTheDocument();
-    expect(within(teachingPanel).getByText('Running the track...')).toBeInTheDocument();
-    expect(slider).toBeDisabled();
-    expect(within(teachingPanel).getByRole('button', { name: 'Go' })).toBeDisabled();
+    expect(within(teachingPanel).getByText('正在运行')).toBeInTheDocument();
+    expect(
+      within(teachingPanel).getByRole('heading', { name: '正在观察这一趟滑行……' }),
+    ).toBeInTheDocument();
+
+    await act(async () => {
+      vi.advanceTimersByTime(1200);
+    });
+
+    expect(within(teachingPanel).getByText('正在运行')).toBeInTheDocument();
+    expect(
+      within(teachingPanel).queryByRole('region', { name: '本轮复盘' }),
+    ).not.toBeInTheDocument();
 
     await act(async () => {
       await vi.runAllTimersAsync();
     });
 
     expect(
-      within(teachingPanel).getByRole('heading', { name: 'Increase a a bit.' }),
+      within(teachingPanel).getByRole('heading', { name: '把 a 再调大一点。' }),
     ).toBeInTheDocument();
 
     const resetButton = within(teachingPanel).getByRole('button', {
-      name: 'Try again',
+      name: '重新调整',
     });
     expect(resetButton).toBeInTheDocument();
-
-    fireEvent.click(resetButton);
-
-    expect(within(teachingPanel).getByText('\u51c6\u5907\u8c03\u53c2')).toBeInTheDocument();
-    expect(within(teachingPanel).getByText('Adjust a to shape the track.')).toBeInTheDocument();
-    expect(slider).not.toBeDisabled();
-    expect(within(teachingPanel).getByRole('button', { name: 'Go' })).toBeEnabled();
   });
 });
