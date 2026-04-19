@@ -10,6 +10,7 @@ vi.mock('../../src/game/render/drawLevel', () => ({
 }));
 
 import App from '../../src/app/App';
+import { levelTwoConfig } from '../../src/game/config/levelTwo';
 
 function createCanvasContextStub(): CanvasRenderingContext2D {
   return {} as CanvasRenderingContext2D;
@@ -285,23 +286,19 @@ describe('App integration', () => {
     });
 
     fireEvent.change(within(teachingPanel).getByLabelText('参数 a'), {
-      target: { value: '0.55' },
+      target: { value: String(levelTwoConfig.targetParameters.a) },
     });
     fireEvent.change(within(teachingPanel).getByLabelText('参数 h'), {
-      target: { value: '-1.1' },
+      target: { value: String(levelTwoConfig.targetParameters.h) },
     });
     fireEvent.change(within(teachingPanel).getByLabelText('参数 k'), {
-      target: { value: '1.15' },
+      target: { value: String(levelTwoConfig.targetParameters.k) },
     });
 
     const updatedLevelTwoCall = drawLevelSpy.mock.calls.at(-1);
     expect(updatedLevelTwoCall?.[1]).toMatchObject({
       activeLevel: 'level-two',
-      levelTwoParameters: {
-        a: 0.55,
-        h: -1.1,
-        k: 1.15,
-      },
+      levelTwoParameters: levelTwoConfig.targetParameters,
     });
   });
 
@@ -339,9 +336,9 @@ describe('App integration', () => {
       .getByRole('heading', { name: '还有几处需要调整。' })
       .closest('section') as HTMLElement;
     expect(within(feedbackPanel).getByRole('list')).toBeInTheDocument();
-    expect(within(feedbackPanel).getByText(/偏右/)).toBeInTheDocument();
+    expect(within(feedbackPanel).getByText(/偏左/)).toBeInTheDocument();
     expect(within(feedbackPanel).getAllByText(/偏高/).length).toBeGreaterThan(0);
-    expect(within(feedbackPanel).queryByText(/-1\.1|1\.1[05]|0\.55/)).not.toBeInTheDocument();
+    expect(within(feedbackPanel).queryByText(/1\.4|0\.9|0\.55/)).not.toBeInTheDocument();
 
     const reviewPanel = within(teachingPanel).getByRole('region', {
       name: '本轮复盘',

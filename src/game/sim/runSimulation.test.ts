@@ -117,22 +117,29 @@ describe('runLevelTwoSimulation', () => {
     });
   });
 
-  it('returns steep, right-shifted, high diagnostics without exposing target values', () => {
+  it('allows a near-miss solution inside the relaxed vertex and platform tolerances', () => {
+    const result = runLevelTwoSimulation({ a: 0.4, h: 1.7, k: 1.15 });
+
+    expect(result.outcome).toBe('success');
+    expect(result.diagnostics).toEqual([]);
+  });
+
+  it('returns steep, left-shifted, high diagnostics without exposing target values', () => {
     const result = runLevelTwoSimulation({ a: 1.15, h: -0.35, k: 1.85 });
 
     expect(result.outcome).toBe('level-two-diagnostics');
     expect(result.diagnostics).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ code: 'a-too-steep', message: expect.stringContaining('偏陡') }),
-        expect.objectContaining({ code: 'vertex-right', message: expect.stringContaining('偏右') }),
-        expect.objectContaining({ code: 'vertex-above', message: expect.stringContaining('偏高') }),
+        expect.objectContaining({ code: 'a-too-steep', message: expect.stringContaining('陡') }),
+        expect.objectContaining({ code: 'vertex-left', message: expect.stringContaining('左') }),
+        expect.objectContaining({ code: 'vertex-above', message: expect.stringContaining('高') }),
         expect.objectContaining({
-          code: 'left-contact-high',
-          message: expect.stringContaining('偏高'),
+          code: 'left-contact-low',
+          message: expect.stringContaining('低'),
         }),
         expect.objectContaining({
           code: 'right-contact-high',
-          message: expect.stringContaining('偏高'),
+          message: expect.stringContaining('高'),
         }),
       ]),
     );
@@ -143,20 +150,21 @@ describe('runLevelTwoSimulation', () => {
     expect(diagnosticCopy).not.toContain(String(levelTwoConfig.targetParameters.k));
   });
 
-  it('returns low diagnostics when the vertex and contact points sit too low', () => {
+  it('returns low diagnostics when the vertex sits too low under the right-side target', () => {
     const result = runLevelTwoSimulation({ a: 0.4, h: -1.1, k: 0.55 });
 
     expect(result.outcome).toBe('level-two-diagnostics');
     expect(result.diagnostics).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ code: 'vertex-below', message: expect.stringContaining('偏低') }),
+        expect.objectContaining({ code: 'vertex-left', message: expect.stringContaining('左') }),
+        expect.objectContaining({ code: 'vertex-below', message: expect.stringContaining('低') }),
         expect.objectContaining({
           code: 'left-contact-low',
-          message: expect.stringContaining('偏低'),
+          message: expect.stringContaining('低'),
         }),
         expect.objectContaining({
-          code: 'right-contact-low',
-          message: expect.stringContaining('偏低'),
+          code: 'right-contact-high',
+          message: expect.stringContaining('高'),
         }),
       ]),
     );
@@ -183,25 +191,21 @@ describe('runLevelTwoSimulation', () => {
   });
 
   it('keeps negative-a diagnostics exclusive to opens-down', () => {
-    const result = runLevelTwoSimulation({ a: -0.2, h: -1.1, k: 1.15 });
+    const result = runLevelTwoSimulation({ a: -0.2, h: 1.4, k: 0.9 });
 
     expect(result.outcome).toBe('level-two-diagnostics');
     expect(result.diagnostics).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ code: 'a-opens-down' }),
-      ]),
+      expect.arrayContaining([expect.objectContaining({ code: 'a-opens-down' })]),
     );
     expect(result.diagnostics).not.toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ code: 'a-too-flat' }),
-      ]),
+      expect.arrayContaining([expect.objectContaining({ code: 'a-too-flat' })]),
     );
   });
 
   it('rejects non-finite h and k inputs', () => {
-    expect(() => runLevelTwoSimulation({ a: 0.55, h: Number.NaN, k: 1.15 })).toThrow(/finite/i);
+    expect(() => runLevelTwoSimulation({ a: 0.55, h: Number.NaN, k: 0.9 })).toThrow(/finite/i);
     expect(() =>
-      runLevelTwoSimulation({ a: 0.55, h: -1.1, k: Number.POSITIVE_INFINITY }),
+      runLevelTwoSimulation({ a: 0.55, h: 1.4, k: Number.POSITIVE_INFINITY }),
     ).toThrow(/finite/i);
   });
 
@@ -217,5 +221,14 @@ describe('runLevelTwoSimulation', () => {
 
     expect(leftY).toBeCloseTo(levelTwoConfig.platforms.start.y, 4);
     expect(rightY).toBeCloseTo(levelTwoConfig.platforms.goal.y, 4);
+  });
+
+  it('keeps the target parameters reachable within the level-two slider ranges', () => {
+    expect(levelTwoConfig.targetParameters.a).toBeGreaterThanOrEqual(levelTwoConfig.sliders.a.min);
+    expect(levelTwoConfig.targetParameters.a).toBeLessThanOrEqual(levelTwoConfig.sliders.a.max);
+    expect(levelTwoConfig.targetParameters.h).toBeGreaterThanOrEqual(levelTwoConfig.sliders.h.min);
+    expect(levelTwoConfig.targetParameters.h).toBeLessThanOrEqual(levelTwoConfig.sliders.h.max);
+    expect(levelTwoConfig.targetParameters.k).toBeGreaterThanOrEqual(levelTwoConfig.sliders.k.min);
+    expect(levelTwoConfig.targetParameters.k).toBeLessThanOrEqual(levelTwoConfig.sliders.k.max);
   });
 });

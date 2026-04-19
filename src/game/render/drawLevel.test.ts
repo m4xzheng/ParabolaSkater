@@ -62,12 +62,12 @@ describe('drawLevel helpers', () => {
     expect(silhouette.legs).toHaveLength(2);
   });
 
-  it('keeps level-two platforms fixed and left lower than right', () => {
+  it('keeps level-two platforms fixed and left higher than right', () => {
     const anchors = getLevelTwoPlatformAnchorPoints();
 
     expect(anchors.start).toEqual(levelTwoConfig.platforms.start);
     expect(anchors.goal).toEqual(levelTwoConfig.platforms.goal);
-    expect(anchors.start.y).toBeLessThan(anchors.goal.y);
+    expect(anchors.start.y).toBeGreaterThan(anchors.goal.y);
   });
 
   it('computes level-two track contact points from vertex-form parameters', () => {
@@ -104,5 +104,20 @@ describe('drawLevel helpers', () => {
       levelTwoConfig.targetVertex.y - levelTwoConfig.targetVertex.radius,
     );
     expect(bounds.yMax).toBeGreaterThan(levelTwoConfig.platforms.goal.y);
+  });
+
+  it('places the level-two target on the right and keeps the platform heights physically intuitive', () => {
+    const anchors = getLevelTwoPlatformAnchorPoints();
+
+    expect(levelTwoConfig.targetVertex.x).toBeGreaterThan(0);
+    expect(anchors.start.y).toBeGreaterThan(anchors.goal.y);
+    expect(anchors.goal.y).toBeGreaterThan(levelTwoConfig.targetVertex.y);
+  });
+
+  it('keeps the level-two goal platform visually separated from the target circle', () => {
+    const anchors = getLevelTwoPlatformAnchorPoints();
+
+    expect(anchors.goal.x - levelTwoConfig.targetVertex.x).toBeGreaterThan(1.25);
+    expect(anchors.goal.y - levelTwoConfig.targetVertex.y).toBeGreaterThan(0.9);
   });
 });

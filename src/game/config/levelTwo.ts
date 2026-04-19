@@ -8,20 +8,20 @@ export const levelTwoConfig = {
   },
   sliders: {
     a: { min: -0.5, max: 1.4, step: 0.05, initial: 0.4 },
-    h: { min: -2.4, max: 1.2, step: 0.05, initial: 0 },
+    h: { min: -2.4, max: 2.4, step: 0.05, initial: 0 },
     k: { min: 0, max: 3, step: 0.05, initial: 2.2 },
   },
-  targetParameters: { a: 0.55, h: -1.1, k: 1.15 },
-  targetVertex: { x: -1.1, y: 1.15, radius: 0.36 },
+  targetParameters: { a: 0.55, h: 1.4, k: 0.9 },
+  targetVertex: { x: 1.4, y: 0.9, radius: 0.5 },
   domain: { xMin: -4.8, xMax: 4.8, sampleStep: 0.1 },
-  geometry: { leftContactX: -2.6, rightContactX: 2.5 },
+  geometry: { leftContactX: -1.6, rightContactX: 2.85 },
   platforms: {
-    start: { x: -2.6, y: 2.3875 },
-    goal: { x: 2.5, y: 8.278 },
+    start: { x: -1.6, y: 5.85 },
+    goal: { x: 2.85, y: 2.0564 },
   },
   simulation: { frameSampleStride: 4 },
   thresholds: {
-    a: { min: 0.35, max: 0.85 },
-    platformTolerance: 0.28,
+    a: { min: 0.4, max: 0.7 },
+    platformTolerance: 0.45,
   },
 } as const;
