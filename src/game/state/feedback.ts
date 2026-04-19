@@ -13,9 +13,11 @@ type OutcomeFeedbackRule = {
   escalated: SessionFeedback;
 };
 
+type LevelOneFeedbackOutcome = Exclude<RunOutcome, 'success' | 'level-two-diagnostics'>;
+
 const successRange = `${levelOneConfig.thresholds.success.min.toFixed(2)} 到 ${levelOneConfig.thresholds.success.max.toFixed(2)}`;
 
-const outcomeFeedbackRules: Record<Exclude<RunOutcome, 'success'>, OutcomeFeedbackRule> = {
+const outcomeFeedbackRules: Record<LevelOneFeedbackOutcome, OutcomeFeedbackRule> = {
   'opens-down': {
     initial: {
       message: '抛物线开口朝下。',
@@ -80,7 +82,8 @@ export function deriveFeedback(input: {
   if (
     input.phase === 'failed' &&
     input.lastResult !== null &&
-    input.lastResult.outcome !== 'success'
+    input.lastResult.outcome !== 'success' &&
+    input.lastResult.outcome !== 'level-two-diagnostics'
   ) {
     const feedbackRule = outcomeFeedbackRules[input.lastResult.outcome];
     return input.failureCount > 1 ? feedbackRule.escalated : feedbackRule.initial;
