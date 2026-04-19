@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
 import { levelOneConfig } from '../config/levelOne';
-import { runSimulation } from './runSimulation';
+import { levelTwoConfig } from '../config/levelTwo';
+import { evaluateVertexParabola } from '../math/parabola';
+import { runLevelTwoSimulation, runSimulation } from './runSimulation';
 
 describe('runSimulation', () => {
   it('starts from the fixed launch platform, lands on the track, and finishes on the fixed goal platform for a viable value', () => {
@@ -82,5 +84,93 @@ describe('runSimulation', () => {
   it('rejects non-finite a inputs', () => {
     expect(() => runSimulation({ a: Number.NaN })).toThrow(/finite/i);
     expect(() => runSimulation({ a: Number.POSITIVE_INFINITY })).toThrow(/finite/i);
+  });
+});
+
+describe('runLevelTwoSimulation', () => {
+  it('succeeds for the target vertex parameters', () => {
+    const result = runLevelTwoSimulation(levelTwoConfig.targetParameters);
+
+    expect(result.levelId).toBe('level-two');
+    expect(result.outcome).toBe('success');
+    expect(result.diagnostics).toEqual([]);
+    expect(result.frames[0]).toMatchObject({
+      index: 0,
+      progress: 0,
+      state: {
+        motion: 'drop',
+        mathPosition: levelTwoConfig.platforms.start,
+        slope: 0,
+      },
+    });
+    expect(result.frames.some((frame) => frame.state.motion === 'ride')).toBe(true);
+    expect(result.frames.at(-1)).toMatchObject({
+      index: result.frames.length - 1,
+      progress: 1,
+      state: {
+        motion: 'jump',
+        mathPosition: levelTwoConfig.platforms.goal,
+        slope: 0,
+      },
+    });
+  });
+
+  it('returns steep, right-shifted, high diagnostics without exposing target values', () => {
+    const result = runLevelTwoSimulation({ a: 1.15, h: -0.35, k: 1.85 });
+
+    expect(result.outcome).toBe('level-two-diagnostics');
+    expect(result.diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: 'a-too-steep', message: expect.stringContaining('偏陡') }),
+        expect.objectContaining({ code: 'vertex-right', message: expect.stringContaining('偏右') }),
+        expect.objectContaining({ code: 'vertex-above', message: expect.stringContaining('偏高') }),
+        expect.objectContaining({
+          code: 'left-contact-high',
+          message: expect.stringContaining('偏高'),
+        }),
+        expect.objectContaining({
+          code: 'right-contact-high',
+          message: expect.stringContaining('偏高'),
+        }),
+      ]),
+    );
+
+    const diagnosticCopy = result.diagnostics.map((diagnostic) => diagnostic.message).join(' ');
+    expect(diagnosticCopy).not.toContain(String(levelTwoConfig.targetParameters.a));
+    expect(diagnosticCopy).not.toContain(String(levelTwoConfig.targetParameters.h));
+    expect(diagnosticCopy).not.toContain(String(levelTwoConfig.targetParameters.k));
+  });
+
+  it('returns low diagnostics when the vertex and contact points sit too low', () => {
+    const result = runLevelTwoSimulation({ a: 0.4, h: -1.1, k: 0.55 });
+
+    expect(result.outcome).toBe('level-two-diagnostics');
+    expect(result.diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: 'vertex-below', message: expect.stringContaining('偏低') }),
+        expect.objectContaining({
+          code: 'left-contact-low',
+          message: expect.stringContaining('偏低'),
+        }),
+        expect.objectContaining({
+          code: 'right-contact-low',
+          message: expect.stringContaining('偏低'),
+        }),
+      ]),
+    );
+  });
+
+  it('matches the platform heights at the configured contact points', () => {
+    const leftY = evaluateVertexParabola(
+      levelTwoConfig.targetParameters,
+      levelTwoConfig.geometry.leftContactX,
+    );
+    const rightY = evaluateVertexParabola(
+      levelTwoConfig.targetParameters,
+      levelTwoConfig.geometry.rightContactX,
+    );
+
+    expect(leftY).toBeCloseTo(levelTwoConfig.platforms.start.y, 4);
+    expect(rightY).toBeCloseTo(levelTwoConfig.platforms.goal.y, 4);
   });
 });

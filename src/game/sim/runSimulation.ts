@@ -1,8 +1,19 @@
 import { levelOneConfig } from '../config/levelOne';
-import { classifyAValue, evaluateParabola, sampleParabolaPoints, type MathPoint } from '../math/parabola';
+import { levelTwoConfig } from '../config/levelTwo';
+import {
+  classifyAValue,
+  evaluateParabola,
+  evaluateVertexParabola,
+  getVertex,
+  sampleParabolaPoints,
+  sampleVertexParabolaPoints,
+  type MathPoint,
+} from '../math/parabola';
 import type {
   FrameMotion,
   FrameState,
+  LevelTwoDiagnostic,
+  LevelTwoParameters,
   OutcomeMessageKey,
   RunOutcome,
   SimulationFrame,
@@ -11,9 +22,11 @@ import type {
 } from './types';
 
 const LANDING_CLEARANCE = 0.12;
+const LEVEL_TWO_MESSAGE_KEY = 'simulation.level-two-diagnostics' as OutcomeMessageKey;
+type LevelOneOutcome = Exclude<RunOutcome, 'level-two-diagnostics'>;
 
 const outcomeSummary: Record<
-  RunOutcome,
+  LevelOneOutcome,
   { messageKey: OutcomeMessageKey; summary: string }
 > = {
   success: {
@@ -48,16 +61,43 @@ export function runSimulation(input: { a: number }): SimulationResult {
   const feedback = outcomeSummary[outcome];
 
   return {
+    levelId: 'level-one',
+    parameters: { a: input.a },
     a: input.a,
     outcome,
     messageKey: feedback.messageKey,
     summary: feedback.summary,
+    diagnostics: [],
     sampling,
     frames: buildFrames(input.a, outcome, sampling),
   };
 }
 
-function classifyOutcome(a: number): RunOutcome {
+export function runLevelTwoSimulation(parameters: LevelTwoParameters): SimulationResult {
+  validateLevelTwoParameters(parameters);
+
+  const diagnostics = getLevelTwoDiagnostics(parameters);
+  const outcome: RunOutcome =
+    diagnostics.length === 0 ? 'success' : 'level-two-diagnostics';
+  const sampling = getLevelTwoSampling();
+
+  return {
+    levelId: 'level-two',
+    parameters,
+    a: parameters.a,
+    outcome,
+    messageKey: outcome === 'success' ? 'simulation.success' : LEVEL_TWO_MESSAGE_KEY,
+    summary:
+      outcome === 'success'
+        ? '顶点已经进入目标圆，左右平台也对齐了。'
+        : diagnostics.map((diagnostic) => diagnostic.message).join(' '),
+    diagnostics,
+    sampling,
+    frames: buildLevelTwoFrames(parameters, outcome, sampling),
+  };
+}
+
+function classifyOutcome(a: number): LevelOneOutcome {
   const landingPoint = getTrackStart(a);
 
   if (landingPoint.y >= levelOneConfig.platforms.start.y - LANDING_CLEARANCE) {
@@ -91,7 +131,7 @@ function classifyOutcome(a: number): RunOutcome {
 
 function buildFrames(
   a: number,
-  outcome: RunOutcome,
+  outcome: LevelOneOutcome,
   sampling: SimulationSampling,
 ): SimulationFrame[] {
   const startPlatform = levelOneConfig.platforms.start;
@@ -252,6 +292,199 @@ function getSampling(): SimulationSampling {
   return {
     domainSampleStep: levelOneConfig.domain.sampleStep,
     frameSampleStride: levelOneConfig.simulation.frameSampleStride,
+    frameStep,
+  };
+}
+
+function validateLevelTwoParameters(parameters: LevelTwoParameters): void {
+  if (
+    !Number.isFinite(parameters.a) ||
+    !Number.isFinite(parameters.h) ||
+    !Number.isFinite(parameters.k)
+  ) {
+    throw new TypeError('runLevelTwoSimulation requires finite numeric a, h, and k values');
+  }
+}
+
+function getLevelTwoDiagnostics(parameters: LevelTwoParameters): LevelTwoDiagnostic[] {
+  const diagnostics: LevelTwoDiagnostic[] = [];
+
+  if (parameters.a <= 0) {
+    diagnostics.push({
+      code: 'a-opens-down',
+      message: '开口方向不对，必须向上打开。',
+    });
+  }
+
+  if (parameters.a < levelTwoConfig.thresholds.a.min) {
+    diagnostics.push({
+      code: 'a-too-flat',
+      message: '开口偏平。',
+    });
+  }
+
+  if (parameters.a > levelTwoConfig.thresholds.a.max) {
+    diagnostics.push({
+      code: 'a-too-steep',
+      message: '开口偏陡。',
+    });
+  }
+
+  const vertex = getVertex(parameters);
+  const target = levelTwoConfig.targetVertex;
+  const dx = vertex.x - target.x;
+  const dy = vertex.y - target.y;
+  const distance = Math.hypot(dx, dy);
+  const axisThreshold = target.radius * 0.35;
+
+  if (distance > target.radius) {
+    if (dx < -axisThreshold) {
+      diagnostics.push({
+        code: 'vertex-left',
+        message: '顶点偏左。',
+      });
+    } else if (dx > axisThreshold) {
+      diagnostics.push({
+        code: 'vertex-right',
+        message: '顶点偏右。',
+      });
+    }
+
+    if (dy < -axisThreshold) {
+      diagnostics.push({
+        code: 'vertex-below',
+        message: '顶点偏低。',
+      });
+    } else if (dy > axisThreshold) {
+      diagnostics.push({
+        code: 'vertex-above',
+        message: '顶点偏高。',
+      });
+    }
+  }
+
+  addContactDiagnostic(diagnostics, {
+    actual: evaluateVertexParabola(parameters, levelTwoConfig.geometry.leftContactX),
+    expected: levelTwoConfig.platforms.start.y,
+    tolerance: levelTwoConfig.thresholds.platformTolerance,
+    highCode: 'left-contact-high',
+    highMessage: '左侧接入点偏高。',
+    lowCode: 'left-contact-low',
+    lowMessage: '左侧接入点偏低。',
+  });
+
+  addContactDiagnostic(diagnostics, {
+    actual: evaluateVertexParabola(parameters, levelTwoConfig.geometry.rightContactX),
+    expected: levelTwoConfig.platforms.goal.y,
+    tolerance: levelTwoConfig.thresholds.platformTolerance,
+    highCode: 'right-contact-high',
+    highMessage: '右侧到达点偏高。',
+    lowCode: 'right-contact-low',
+    lowMessage: '右侧到达点偏低。',
+  });
+
+  return diagnostics;
+}
+
+function addContactDiagnostic(
+  diagnostics: LevelTwoDiagnostic[],
+  input: {
+    actual: number;
+    expected: number;
+    tolerance: number;
+    highCode: LevelTwoDiagnostic['code'];
+    highMessage: string;
+    lowCode: LevelTwoDiagnostic['code'];
+    lowMessage: string;
+  },
+): void {
+  const delta = input.actual - input.expected;
+
+  if (delta > input.tolerance) {
+    diagnostics.push({
+      code: input.highCode,
+      message: input.highMessage,
+    });
+  } else if (delta < -input.tolerance) {
+    diagnostics.push({
+      code: input.lowCode,
+      message: input.lowMessage,
+    });
+  }
+}
+
+function buildLevelTwoFrames(
+  parameters: LevelTwoParameters,
+  outcome: RunOutcome,
+  sampling: SimulationSampling,
+): SimulationFrame[] {
+  const startPlatform = levelTwoConfig.platforms.start;
+  const goalPlatform = levelTwoConfig.platforms.goal;
+  const trackStart = getLevelTwoTrackPoint(parameters, levelTwoConfig.geometry.leftContactX);
+  const trackGoal = getLevelTwoTrackPoint(parameters, levelTwoConfig.geometry.rightContactX);
+
+  if (outcome === 'success') {
+    return finalizeFrames(
+      mergeStateLists(
+        buildLinearStates(startPlatform, trackStart, 5, 'drop'),
+        buildLevelTwoTrackStates(parameters, trackStart.x, trackGoal.x, sampling.frameStep),
+        buildLinearStates(trackGoal, goalPlatform, 4, 'jump'),
+      ),
+    );
+  }
+
+  const vertex = getVertex(parameters);
+  const rideEndX = Math.min(trackGoal.x, round(vertex.x + 1.2));
+  const crashPoint = {
+    x: round(Math.min(levelTwoConfig.geometry.rightContactX, vertex.x + 1.4)),
+    y: round(vertex.y - 1.8),
+  };
+
+  return finalizeFrames(
+    mergeStateLists(
+      buildLinearStates(startPlatform, trackStart, 5, 'drop'),
+      buildLevelTwoTrackStates(parameters, trackStart.x, rideEndX, sampling.frameStep),
+      buildLinearStates(getLevelTwoTrackPoint(parameters, vertex.x), crashPoint, 4, 'crash'),
+    ),
+  );
+}
+
+function buildLevelTwoTrackStates(
+  parameters: LevelTwoParameters,
+  xMin: number,
+  xMax: number,
+  step: number,
+): FrameState[] {
+  return sampleVertexParabolaPoints({
+    parameters,
+    xMin,
+    xMax,
+    step,
+  }).map((mathPosition) => ({
+    motion: 'ride',
+    mathPosition: {
+      x: round(mathPosition.x),
+      y: round(mathPosition.y),
+    },
+    slope: round(2 * parameters.a * (mathPosition.x - parameters.h)),
+  }));
+}
+
+function getLevelTwoTrackPoint(parameters: LevelTwoParameters, x: number): MathPoint {
+  return {
+    x: round(x),
+    y: round(evaluateVertexParabola(parameters, x)),
+  };
+}
+
+function getLevelTwoSampling(): SimulationSampling {
+  const frameStep = round(
+    levelTwoConfig.domain.sampleStep * levelTwoConfig.simulation.frameSampleStride,
+  );
+
+  return {
+    domainSampleStep: levelTwoConfig.domain.sampleStep,
+    frameSampleStride: levelTwoConfig.simulation.frameSampleStride,
     frameStep,
   };
 }
