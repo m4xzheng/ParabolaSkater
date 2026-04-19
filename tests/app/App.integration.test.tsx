@@ -264,6 +264,36 @@ describe('App integration', () => {
     ).toBeInTheDocument();
   });
 
+  it('shows a summary entry button after level-two success', async () => {
+    render(<App />);
+
+    await completeLevelOneSuccess();
+
+    const teachingPanel = screen.getByRole('complementary', {
+      name: '教学面板',
+    });
+
+    fireEvent.click(within(teachingPanel).getByRole('button', { name: '进入第二关' }));
+    fireEvent.change(within(teachingPanel).getByLabelText('参数 a'), {
+      target: { value: String(levelTwoConfig.targetParameters.a) },
+    });
+    fireEvent.change(within(teachingPanel).getByLabelText('参数 h'), {
+      target: { value: String(levelTwoConfig.targetParameters.h) },
+    });
+    fireEvent.change(within(teachingPanel).getByLabelText('参数 k'), {
+      target: { value: String(levelTwoConfig.targetParameters.k) },
+    });
+    fireEvent.click(within(teachingPanel).getByRole('button', { name: '开始滑行' }));
+
+    await act(async () => {
+      await vi.runAllTimersAsync();
+    });
+
+    expect(
+      within(teachingPanel).getByRole('button', { name: '查看知识点总结' }),
+    ).toBeInTheDocument();
+  });
+
   it('passes the active level and vertex parameters through to drawLevel in level two', async () => {
     render(<App />);
 

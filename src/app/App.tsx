@@ -15,6 +15,7 @@ const PLAYBACK_TICK_MS = 50;
 
 type FailedRunsByLevel = Record<LevelId, SimulationResult[]>;
 type GhostVisibilityByLevel = Record<LevelId, boolean>;
+type AppView = 'game' | 'summary';
 
 const initialFailedRuns: FailedRunsByLevel = {
   'level-one': [],
@@ -28,6 +29,7 @@ const initialGhostVisibility: GhostVisibilityByLevel = {
 
 export default function App(): JSX.Element {
   const session = useLevelSession();
+  const [appView, setAppView] = useState<AppView>('game');
   const {
     activeLevel,
     aValue,
@@ -146,6 +148,11 @@ export default function App(): JSX.Element {
       ? '你已经找到能跨过缺口的 a 值，可以准备进入下一步学习。'
       : '这条顶点式轨道已经和目标圆、左右平台都对齐了。';
   const showLevelTwoEntry = activeLevel === 'level-one' && canEnterLevelTwo;
+  const showSummaryEntry =
+    appView === 'game' &&
+    activeLevel === 'level-two' &&
+    phase === 'success' &&
+    lastSimulationResult?.outcome === 'success';
 
   return (
     <main className="app-shell">
@@ -213,6 +220,18 @@ export default function App(): JSX.Element {
           <div className="level-entry-row">
             <button type="button" className="level-entry-button" onClick={enterLevelTwo}>
               进入第二关
+            </button>
+          </div>
+        ) : null}
+
+        {showSummaryEntry ? (
+          <div className="level-entry-row">
+            <button
+              type="button"
+              className="level-entry-button"
+              onClick={() => setAppView('summary')}
+            >
+              查看知识点总结
             </button>
           </div>
         ) : null}
